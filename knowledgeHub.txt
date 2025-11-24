@@ -1,0 +1,327 @@
+User Query
+    ↓
+┌───────────────┐
+│ Query Router  │ (LLM-based intent classification)
+└───────┬───────┘
+        ↓
+    ┌───┴───┐
+    ↓       ↓
+Vector     Graph
+Search    Traversal
+    ↓       ↓
+  Results  Results
+    └───┬───┘
+        ↓
+   Reranker
+        ↓
+  LLM Synthesis
+
+  ┌─────────────┐
+│     API     │
+└──────┬──────┘
+       │
+       ├─── HAS_VERSION ──→ [APIVersion]
+       ├─── OWNED_BY ──→ [Team/Owner]
+       └─── HAS_ENDPOINT ──→ [Endpoint]
+                                  │
+                                  ├─── HAS_PARAMETER ──→ [Parameter]
+                                  │         │
+                                  │         ├─── TYPE: [DataType]
+                                  │         ├─── VALIDATES_WITH: [ValidationRule]
+                                  │         └─── ATTRIBUTE_OF ──→ [Schema]
+                                  │
+                                  ├─── ACCEPTS_SCHEMA ──→ [RequestSchema]
+                                  ├─── RETURNS_SCHEMA ──→ [ResponseSchema]
+                                  │         │
+                                  │         └─── HAS_ATTRIBUTE ──→ [Attribute]
+                                  │                   │
+                                  │                   ├─── DATA_TYPE: string/int/object
+                                  │                   ├─── REFERENCES ──→ [OtherAttribute]
+                                  │                   └─── MAPPED_TO ──→ [DataModel]
+                                  │
+                                  ├─── REQUIRES_AUTH ──→ [SecurityScheme]
+                                  └─── PRODUCES_ERROR ──→ [ErrorCode]
+
+
+
+[Endpoint] ──USED_BY──→ [Application]
+    │                       │
+    │                       ├─── ENVIRONMENT: prod/staging/dev
+    │                       ├─── TEAM: [Team]
+    │                       └─── VERSION: string
+    │
+    ├──VOLUMETRICS──→ [UsageMetrics]
+    │                       │
+    │                       ├─── avg_calls_per_day: int
+    │                       ├─── peak_tps: int
+    │                       ├─── p95_latency: float
+    │                       ├─── error_rate: float
+    │                       └─── last_updated: timestamp
+    │
+    ├──SECURED_BY──→ [SecurityControl]
+    │                       │
+    │                       ├─── auth_method: OAuth/JWT/API_KEY
+    │                       ├─── scopes_required: [string]
+    │                       ├─── rate_limit: int
+    │                       └─── ip_whitelist: boolean
+    │
+    └──COMPLIANCE──→ [ComplianceTag]
+                            │
+                            ├─── pii_data: boolean
+                            ├─── gdpr_relevant: boolean
+                            ├─── data_classification: string
+                            └─── audit_required: boolean
+
+[Attribute] ──FLOWS_TO──→ [Attribute] (data lineage)
+    │
+    ├──CONTAINS_DATA_TYPE──→ [DataClassification]
+    │                            │
+    │                            ├─── sensitivity: high/medium/low
+    │                            ├─── encryption_required: boolean
+    │                            └─── retention_days: int
+    │
+    └──SOURCED_FROM──→ [DataSource]
+                            │
+                            ├─── database: string
+                            ├─── table: string
+                            └─── column: string
+
+Phase 1: Foundation (Now)
+Static Metadata from Swagger:
+
+  - API structure
+- Endpoints, methods, paths
+- Request/Response schemas
+- Attributes and their types
+- Security schemes defined
+- Error codes
+
+
+Phase 2. Graph Construction:
+
+Auto-generate from OpenAPI specs
+Create attribute-level nodes
+Establish schema relationships
+Link parameter dependencies
+
+Phase 2: Application Usage Mapping (Next)
+Data Collection:
+python# Example: Parse application configs, API gateway logs
+{
+  "application": "mobile-app-ios",
+  "endpoints_used": [
+    "/api/v1/users/{id}",
+    "/api/v1/orders"
+  ],
+  "environment": "production",
+  "team": "mobile-team"
+}
+Graph Enhancement:
+
+Create Application nodes
+Link to consumed endpoints
+Track which attributes are actually used
+Identify unused endpoints/attributes
+
+Phase 3: Volumetric Data Integration
+Data Sources:
+
+API Gateway metrics (AWS CloudWatch, Azure Monitor, Kong)
+Application Performance Monitoring (Datadog, New Relic)
+Log aggregation (Splunk, ELK)
+
+Implementation Approach:
+python# Periodic sync job
+def sync_volumetrics():
+    # Aggregate last 7 days
+    metrics = fetch_from_apm_tool()
+    
+    for endpoint in metrics:
+        graph.update_node(
+            endpoint_id,
+            {
+                "avg_daily_calls": metrics['avg_calls'],
+                "p95_latency_ms": metrics['p95'],
+                "error_rate": metrics['errors'],
+                "last_updated": datetime.now(),
+                "trend": calculate_trend(metrics)
+            }
+        )
+Value-Add Queries:
+
+"Show me high-traffic endpoints with high error rates"
+"Which APIs are underutilized?"
+"Critical path analysis" (most-used endpoints in user flows)
+
+Phase 4: Security & Compliance Metadata
+Data Integration:
+yaml# Security scanner output
+endpoint: /api/v1/users/{id}
+security:
+  auth_methods: [OAuth2, JWT]
+  scopes: [user.read, user.write]
+  rate_limit: 1000/hour
+  
+attributes:
+  - name: email
+    pii: true
+    encryption: required
+    gdpr_relevant: true
+  
+  - name: user_id
+    pii: false
+    sensitive: false
+Enhanced Queries:
+
+"Show all endpoints that expose PII data"
+"Which apps access GDPR-relevant attributes?"
+"Map data flow for attribute 'ssn' across all APIs"
+
+Advanced Use Cases Enabled
+1. Impact Analysis
+cypher// "If I deprecate this endpoint, what apps break?"
+MATCH (e:Endpoint {path: '/api/v1/legacy/users'})
+      -[:USED_BY]->(app:Application)
+RETURN app.name, app.team, app.environment
+2. Data Lineage
+cypher// "Where does the 'email' attribute flow?"
+MATCH path = (a1:Attribute {name: 'email'})
+             -[:FLOWS_TO*]->(a2:Attribute)
+RETURN path
+3. Security Audit
+cypher// "Show endpoints handling PII without encryption"
+MATCH (e:Endpoint)-[:RETURNS_SCHEMA]->()
+      -[:HAS_ATTRIBUTE]->(a:Attribute {pii: true})
+WHERE NOT (e)-[:SECURED_BY]->(:SecurityControl {encryption: true})
+RETURN e.path, a.name, collect(e.method) as methods
+4. Performance Optimization
+cypher// "High-traffic endpoints with slow responses used by prod apps"
+MATCH (e:Endpoint)-[:USED_BY]->(app:Application {environment: 'production'})
+WHERE e.avg_daily_calls > 100000 
+  AND e.p95_latency_ms > 500
+RETURN e.path, e.avg_daily_calls, e.p95_latency_ms, 
+       collect(app.name) as affected_apps
+ORDER BY e.avg_daily_calls DESC
+5. Attribute-Level Usage Analysis
+cypher// "Which response attributes are never used by any app?"
+MATCH (a:Attribute)<-[:HAS_ATTRIBUTE]-(:ResponseSchema)
+      <-[:RETURNS_SCHEMA]-(e:Endpoint)
+WHERE NOT EXISTS {
+  MATCH (e)-[:USED_BY]->(app)
+  WHERE app.uses_attribute = a.name  // Need instrumentation
+}
+RETURN a.name, e.path
+```
+
+## Dual-Store Architecture Refinement
+
+Given your attribute-level granularity goals:
+```
+┌─────────────────────────────────────────┐
+│         Query Interface Layer           │
+└────────────┬────────────────────────────┘
+             │
+    ┌────────┴────────┐
+    ↓                 ↓
+┌───────────┐   ┌──────────────┐
+│  Vector   │   │    Graph     │
+│   Store   │   │   Database   │
+└───────────┘   └──────────────┘
+     │                  │
+     │                  │
+┌────┴────┐        ┌────┴────┐
+│Semantic │        │Structural│
+│ Search  │        │Analytical│
+│Context  │        │Lineage   │
+│Examples │        │Impact    │
+└─────────┘        └──────────┘
+```
+
+**Vector Store Focus:**
+- Full-text documentation
+- Usage examples
+- Conceptual search
+- "How do I..." queries
+
+**Graph Store Focus:**
+- Relationships & dependencies
+- Operational metadata
+- Analytical queries
+- Impact analysis
+- Data lineage
+
+## Implementation Recommendations
+
+### Data Pipeline Architecture
+```
+[Swagger Files] ──→ Parser ──→ Graph Builder
+                                    ↓
+[MD Documentation] ──→ Chunker ──→ Vector Embedder
+                                    ↓
+[APM/Monitoring] ──→ Aggregator ──→ Graph Updater (scheduled)
+                                    ↓
+[Security Scans] ──→ Enricher ──→ Graph Updater
+                                    ↓
+[App Configs] ──→ Mapper ──→ Relationship Creator
+Tech Stack for This Approach
+Graph Database: Neo4j (strongly recommended)
+
+Cypher query language perfect for your use cases
+Excellent visualization tools
+Good performance for analytical queries
+Strong community
+
+Vector Store: Qdrant or Weaviate
+
+Better metadata filtering than Redis
+Easier to sync with graph updates
+Good API clients
+
+Orchestration: Apache Airflow or Prefect
+
+Schedule volumetric data syncs
+Manage dependency updates
+Handle incremental updates
+
+API Layer: FastAPI
+python@app.get("/api/search")
+async def hybrid_search(query: str, filters: dict):
+    # Semantic search in vector store
+    vector_results = await vector_db.search(query, filters)
+    
+    # Enrich with graph relationships
+    for result in vector_results:
+        result['apps'] = graph.get_consuming_apps(result['endpoint_id'])
+        result['metrics'] = graph.get_metrics(result['endpoint_id'])
+    
+    return vector_results
+Incremental Data Update Strategy
+python# When Swagger file changes
+def update_api_spec(api_name: str, new_spec: dict):
+    old_graph = graph.get_api_subgraph(api_name)
+    new_graph = parse_swagger(new_spec)
+    
+    diff = compute_diff(old_graph, new_graph)
+    
+    # Track changes
+    for change in diff.added_endpoints:
+        graph.add_node(change, metadata={'added_date': now()})
+    
+    for change in diff.removed_endpoints:
+        graph.mark_deprecated(change.id)
+        # Keep for historical queries
+    
+    for change in diff.modified_attributes:
+        graph.version_attribute(change)
+        # Track attribute evolution
+Quick Wins to Start
+
+Week 1-2: Build basic graph from Swagger files (automated)
+Week 3: Add vector search on documentation
+Week 4: Manual mapping of top 5 applications to endpoints
+Week 5: Dashboard showing basic relationships
+Week 6+: Incrementally add volumetrics, security metadata
+
+This approach lets you deliver value quickly while building toward the comprehensive attribute-level knowledge hub you envision.
+Would you like me to create a detailed implementation plan for any specific phase, or help design the graph schema in more detail with sample Cypher queries?
+
