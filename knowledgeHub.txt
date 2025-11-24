@@ -1,3 +1,55 @@
+Phase 1: Data Preparation & Ingestion
+Extract and Structure Data:
+
+Parse Swagger/OpenAPI specs to extract endpoints, parameters, schemas, authentication methods
+Parse MD documentation for context, examples, best practices
+Create structured chunks maintaining API operation context (don't break endpoint descriptions across chunks)
+
+Multi-level Chunking Strategy:
+
+API-level: Overview, authentication, base URLs
+Endpoint-level: Path, method, parameters, responses
+Schema-level: Data models, nested objects
+Example-level: Code samples, use cases
+
+Phase 2: Parallel Storage (Not Sequential)
+Instead of embedding → analysis → graph, do this simultaneously:
+Vector Store (Redis/Alternative):
+
+Embed all chunks with metadata (API name, endpoint, method, tags)
+Use hybrid search (semantic + keyword) - Redis supports VSS
+Store metadata for filtering (version, deprecated status, auth type)
+
+Knowledge Graph (Neo4j/Neptune recommended):
+
+Build graph structure directly from Swagger specs
+Nodes: APIs, Endpoints, Schemas, Parameters, Error Codes
+Relationships: USES_SCHEMA, REQUIRES_AUTH, RETURNS, SIMILAR_TO, SUPERSEDES (for versioning)
+
+Phase 3: Enrichment via LLM
+Run LLM analysis to enhance both stores:
+For Vector DB:
+
+Generate alternative phrasings/questions that each endpoint answers
+Create conceptual summaries
+Extract domain concepts
+
+For Knowledge Graph:
+
+Identify implicit relationships (e.g., endpoints that work together for a workflow)
+Add semantic similarity edges between related endpoints
+Create concept nodes (e.g., "User Management", "Payment Processing")
+Map common patterns across APIs
+
+Phase 4: Unified Query Layer
+Hybrid Retrieval Strategy:
+
+Enhanced Graph Schema Design
+Core Entity Model
+
+
+
+
 User Query
     ↓
 ┌───────────────┐
