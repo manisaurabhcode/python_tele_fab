@@ -1,0 +1,461 @@
+-- ============================================
+-- 1. JavaScript Callout Equivalent Plugin
+-- ============================================
+-- File: kong/plugins/js-equivalent/handler.lua
+
+local BasePlugin = require "kong.plugins.base_plugin"
+local cjson = require "cjson"
+
+local JSEquivalentHandler = BasePlugin:extend()
+
+JSEquivalentHandler.PRIORITY = 1000
+JSEquivalentHandler.VERSION = "1.0.0"
+
+function JSEquivalentHandler:new()
+  JSEquivalentHandler.super.new(self, "js-equivalent")
+end
+
+function JSEquivalentHandler:access(conf)
+  JSEquivalentHandler.super.access(self)
+  
+  -- Example: Replicate JavaScript logic in Lua
+  -- Original Apigee JavaScript:
+  -- var apiKey = context.getVariable("request.header.apikey");
+  -- if (!apiKey) {
+  --   throw "API Key is required";
+  -- }
+  
+  local apiKey = kong.request.get_header("apikey")
+  
+  if not apiKey then
+    return kong.response.exit(401, {
+      message = "API Key is required"
+    })
+  end
+  
+  -- Add custom header based on logic
+  kong.service.request.set_header("X-Processed-By", "Kong-Lua")
+  kong.service.request.set_header("X-API-Key-Length", tostring(#apiKey))
+end
+
+return JSEquivalentHandler
+
+-- ============================================
+-- Schema for JS Equivalent Plugin
+-- ============================================
+-- File: kong/plugins/js-equivalent/schema.lua
+
+local typedefs = require "kong.db.schema.typedefs"
+
+return {
+  name = "js-equivalent",
+  fields = {
+    { consumer = typedefs.no_consumer },
+    { protocols = typedefs.protocols_http },
+    { config = {
+        type = "record",
+        fields = {
+          { custom_header = { type = "string", default = "X-Custom-Header" }},
+          { enable_logging = { type = "boolean", default = true }},
+        },
+      },
+    },
+  },
+}
+
+
+-- ============================================
+-- 2. Service Callout Equivalent Plugin
+-- ============================================
+-- File: kong/plugins/service-callout/handler.lua
+
+local BasePlugin = require "kong.plugins.base_plugin"
+local http = require "resty.http"
+local cjson = require "cjson"
+
+local ServiceCalloutHandler = BasePlugin:extend()
+
+ServiceCalloutHandler.PRIORITY = 900
+ServiceCalloutHandler.VERSION = "1.0.0"
+
+function ServiceCalloutHandler:new()
+  ServiceCalloutHandler.super.new(self, "service-callout")
+end
+
+function ServiceCalloutHandler:access(conf)
+  ServiceCalloutHandler.super.access(self)
+  
+  -- Make external HTTP call (equivalent to Apigee ServiceCallout)
+  local httpc = http.new()
+  httpc:set_timeout(conf.timeout)
+  
+  local res, err = httpc:request_uri(conf.service_url, {
+    method = conf.method,
+    headers = {
+      ["Content-Type"] = "application/json",
+      ["Authorization"] = "Bearer " .. conf.auth_token
+    },
+    body = cjson.encode({
+      request_id = kong.request.get_header("X-Request-ID"),
+      timestamp = ngx.now()
+    })
+  })
+  
+  if not res then
+    kong.log.err("Service callout failed: ", err)
+    if conf.fail_on_error then
+      return kong.response.exit(503, {
+        message = "External service unavailable"
+      })
+    end
+    return
+  end
+  
+  -- Process response
+  if res.status == 200 then
+    local response_data = cjson.decode(res.body)
+    
+    -- Set response data as headers or context
+    kong.service.request.set_header("X-External-Data", cjson.encode(response_data))
+    kong.ctx.shared.external_data = response_data
+  end
+  
+  httpc:close()
+end
+
+return ServiceCalloutHandler
+
+-- ============================================
+-- Schema for Service Callout Plugin
+-- ============================================
+-- File: kong/plugins/service-callout/schema.lua
+
+local typedefs = require "kong.db.schema.typedefs"
+
+return {
+  name = "service-callout",
+  fields = {
+    { consumer = typedefs.no_consumer },
+    { protocols = typedefs.protocols_http },
+    { config = {
+        type = "record",
+        fields = {
+          { service_url = typedefs.url({ required = true })},
+          { method = { type = "string", default = "GET", one_of = { "GET", "POST", "PUT" }}},
+          { auth_token = { type = "string" }},
+          { timeout = { type = "number", default = 5000 }},
+          { fail_on_error = { type = "boolean", default = false }},
+        },
+      },
+    },
+  },
+}
+
+
+-- ============================================
+-- 3. XML to JSON Transformer Plugin
+-- ============================================
+-- File: kong/plugins/xml-to-json/handler.lua
+
+local BasePlugin = require "kong.plugins.base_plugin"
+local cjson = require "cjson"
+
+local XMLToJSONHandler = BasePlugin:extend()
+
+XMLToJSONHandler.PRIORITY = 800
+XMLToJSONHandler.VERSION = "1.0.0"
+
+function XMLToJSONHandler:new()
+  XMLToJSONHandler.super.new(self, "xml-to-json")
+end
+
+-- Simple XML to Lua table parser
+local function xml_to_table(xml_string)
+  -- This is a simplified parser - for production use a proper XML library
+  local result = {}
+  
+  -- Extract root element
+  local root = xml_string:match("<([^/>%s]+)")
+  if not root then return nil end
+  
+  result[root] = {}
+  
+  -- Extract child elements (simplified)
+  for tag, content in xml_string:gmatch("<([^/>%s]+)>([^<]+)</[^>]+>") do
+    result[root][tag] = content
+  end
+  
+  return result
+end
+
+function XMLToJSONHandler:access(conf)
+  XMLToJSONHandler.super.access(self)
+  
+  local content_type = kong.request.get_header("Content-Type")
+  
+  if content_type and content_type:find("xml") then
+    local body = kong.request.get_raw_body()
+    
+    if body then
+      -- Convert XML to table
+      local data = xml_to_table(body)
+      
+      if data then
+        -- Convert to JSON
+        local json_body = cjson.encode(data)
+        
+        -- Set new body and content type
+        kong.service.request.set_raw_body(json_body)
+        kong.service.request.set_header("Content-Type", "application/json")
+        kong.service.request.set_header("X-Original-Content-Type", content_type)
+      else
+        kong.log.warn("Failed to parse XML body")
+      end
+    end
+  end
+end
+
+return XMLToJSONHandler
+
+-- ============================================
+-- Schema for XML to JSON Plugin
+-- ============================================
+-- File: kong/plugins/xml-to-json/schema.lua
+
+local typedefs = require "kong.db.schema.typedefs"
+
+return {
+  name = "xml-to-json",
+  fields = {
+    { consumer = typedefs.no_consumer },
+    { protocols = typedefs.protocols_http },
+    { config = {
+        type = "record",
+        fields = {
+          { preserve_original = { type = "boolean", default = false }},
+          { encoding = { type = "string", default = "utf-8" }},
+        },
+      },
+    },
+  },
+}
+
+
+-- ============================================
+-- 4. Custom Request Enrichment Plugin
+-- ============================================
+-- File: kong/plugins/request-enrichment/handler.lua
+
+local BasePlugin = require "kong.plugins.base_plugin"
+local cjson = require "cjson"
+
+local RequestEnrichmentHandler = BasePlugin:extend()
+
+RequestEnrichmentHandler.PRIORITY = 950
+RequestEnrichmentHandler.VERSION = "1.0.0"
+
+function RequestEnrichmentHandler:new()
+  RequestEnrichmentHandler.super.new(self, "request-enrichment")
+end
+
+function RequestEnrichmentHandler:access(conf)
+  RequestEnrichmentHandler.super.access(self)
+  
+  -- Add timestamp
+  if conf.add_timestamp then
+    kong.service.request.set_header("X-Request-Timestamp", tostring(ngx.now()))
+  end
+  
+  -- Add request ID if not present
+  if conf.add_request_id then
+    local request_id = kong.request.get_header("X-Request-ID")
+    if not request_id then
+      request_id = kong.utils.uuid()
+      kong.service.request.set_header("X-Request-ID", request_id)
+    end
+  end
+  
+  -- Add correlation ID
+  if conf.add_correlation_id then
+    local correlation_id = kong.request.get_header("X-Correlation-ID")
+    if not correlation_id then
+      correlation_id = kong.utils.uuid()
+      kong.service.request.set_header("X-Correlation-ID", correlation_id)
+    end
+  end
+  
+  -- Add client IP
+  if conf.add_client_ip then
+    local client_ip = kong.client.get_forwarded_ip()
+    kong.service.request.set_header("X-Client-IP", client_ip)
+  end
+  
+  -- Add user agent
+  if conf.add_user_agent then
+    local user_agent = kong.request.get_header("User-Agent")
+    if user_agent then
+      kong.service.request.set_header("X-Original-User-Agent", user_agent)
+    end
+  end
+  
+  -- Custom business logic
+  if conf.enrich_with_geo then
+    local client_ip = kong.client.get_forwarded_ip()
+    -- Here you would typically call a GeoIP service
+    kong.service.request.set_header("X-Client-Country", "Unknown")
+    kong.service.request.set_header("X-Client-Region", "Unknown")
+  end
+end
+
+return RequestEnrichmentHandler
+
+-- ============================================
+-- Schema for Request Enrichment Plugin
+-- ============================================
+-- File: kong/plugins/request-enrichment/schema.lua
+
+local typedefs = require "kong.db.schema.typedefs"
+
+return {
+  name = "request-enrichment",
+  fields = {
+    { consumer = typedefs.no_consumer },
+    { protocols = typedefs.protocols_http },
+    { config = {
+        type = "record",
+        fields = {
+          { add_timestamp = { type = "boolean", default = true }},
+          { add_request_id = { type = "boolean", default = true }},
+          { add_correlation_id = { type = "boolean", default = true }},
+          { add_client_ip = { type = "boolean", default = false }},
+          { add_user_agent = { type = "boolean", default = false }},
+          { enrich_with_geo = { type = "boolean", default = false }},
+        },
+      },
+    },
+  },
+}
+
+
+-- ============================================
+-- 5. Response Transformation Plugin
+-- ============================================
+-- File: kong/plugins/response-transform/handler.lua
+
+local BasePlugin = require "kong.plugins.base_plugin"
+local cjson = require "cjson"
+
+local ResponseTransformHandler = BasePlugin:extend()
+
+ResponseTransformHandler.PRIORITY = 700
+ResponseTransformHandler.VERSION = "1.0.0"
+
+function ResponseTransformHandler:new()
+  ResponseTransformHandler.super.new(self, "response-transform")
+end
+
+function ResponseTransformHandler:header_filter(conf)
+  ResponseTransformHandler.super.header_filter(self)
+  
+  -- Add custom response headers
+  if conf.add_processing_time then
+    local processing_time = (ngx.now() - ngx.req.start_time()) * 1000
+    kong.response.set_header("X-Processing-Time-Ms", tostring(processing_time))
+  end
+  
+  if conf.add_kong_version then
+    kong.response.set_header("X-Kong-Version", kong.version)
+  end
+end
+
+function ResponseTransformHandler:body_filter(conf)
+  ResponseTransformHandler.super.body_filter(self)
+  
+  local content_type = kong.response.get_header("Content-Type")
+  
+  if content_type and content_type:find("application/json") then
+    local body = kong.response.get_raw_body()
+    
+    if body then
+      local ok, json_body = pcall(cjson.decode, body)
+      
+      if ok and conf.wrap_response then
+        -- Wrap response in envelope
+        local wrapped = {
+          success = true,
+          data = json_body,
+          metadata = {
+            timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+            version = "1.0"
+          }
+        }
+        
+        kong.response.set_raw_body(cjson.encode(wrapped))
+      end
+      
+      if ok and conf.remove_fields and #conf.remove_fields > 0 then
+        -- Remove specified fields
+        for _, field in ipairs(conf.remove_fields) do
+          json_body[field] = nil
+        end
+        kong.response.set_raw_body(cjson.encode(json_body))
+      end
+    end
+  end
+end
+
+return ResponseTransformHandler
+
+-- ============================================
+-- Schema for Response Transform Plugin
+-- ============================================
+-- File: kong/plugins/response-transform/schema.lua
+
+local typedefs = require "kong.db.schema.typedefs"
+
+return {
+  name = "response-transform",
+  fields = {
+    { consumer = typedefs.no_consumer },
+    { protocols = typedefs.protocols_http },
+    { config = {
+        type = "record",
+        fields = {
+          { add_processing_time = { type = "boolean", default = true }},
+          { add_kong_version = { type = "boolean", default = false }},
+          { wrap_response = { type = "boolean", default = false }},
+          { remove_fields = { type = "array", elements = { type = "string" }, default = {} }},
+        },
+      },
+    },
+  },
+}
+
+
+-- ============================================
+-- Plugin Installation Instructions
+-- ============================================
+--[[
+
+1. Create plugin directory structure:
+   mkdir -p /usr/local/share/lua/5.1/kong/plugins/{plugin-name}
+
+2. Copy handler.lua and schema.lua to plugin directory:
+   cp handler.lua /usr/local/share/lua/5.1/kong/plugins/{plugin-name}/
+   cp schema.lua /usr/local/share/lua/5.1/kong/plugins/{plugin-name}/
+
+3. Enable plugin in kong.conf:
+   plugins = bundled,js-equivalent,service-callout,xml-to-json,request-enrichment,response-transform
+
+4. Reload Kong:
+   kong reload
+
+5. Apply plugin to service/route:
+   curl -X POST http://localhost:8001/services/{service}/plugins \
+     --data "name=js-equivalent" \
+     --data "config.enable_logging=true"
+
+6. Test the plugin:
+   curl -H "apikey: test-key" http://localhost:8000/api/endpoint
+
+]]--
