@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mythology Story Studio - AI-Powered Indian Mythology for Kids</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Vue.js 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <style>
+        /* Custom animations */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+        
+        /* Line clamp utility */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Custom gradient background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #FFF5E6 0%, #F3E5F5 100%);
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        const { createApp } = Vue;
+
+        // ============================================================================
+        // Main App Component
+        // ============================================================================
+        const App = {
+            template: `
+                <div id="app" class="min-h-screen gradient-bg">
+                    <!-- Header -->
+                    <header class="bg-white shadow-md border-b-4 border-orange-500">
+                        <div class="container mx-auto px-6 py-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-4xl">📚</div>
+                                    <div>
+                                        <h1 class="text-2xl font-bold text-orange-600">Mythology Story Studio</h1>
+                                        <p class="text-sm text-gray-600">AI-Powered Indian Mythology for Kids</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <div class="text-sm text-gray-600">
+                                        <span class="font-semibold">{{ stats.generated_stories }}</span> stories
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        <span class="font-semibold">{{ stats.total_characters }}</span> characters
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <!-- Main Content -->
+                    <div class="container mx-auto px-6 py-8">
+                        <!-- Navigation Tabs -->
+                        <div class="bg-white rounded-lg shadow-md mb-6">
+                            <div class="flex border-b overflow-x-auto">
+                                <button
+                                    v-for="tab in tabs"
+                                    :key="tab.id"
+                                    @click="activeTab = tab.id"
+                                    :class="[
+                                        'px-6 py-3 font-medium transition-colors whitespace-nowrap',
+                                        activeTab === tab.id
+                                            ? 'text-orange-600 border-b-2 border-orange-600'
+                                            : 'text-gray-600 hover:text-orange-500'
+                                    ]"
+                                >
+                                    {{ tab.icon }} {{ tab.name }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Tab Content -->
+                        <transition name="fade" mode="out-in">
+                            <component :is="currentTabComponent" :key="activeTab"></component>
+                        </transition>
+                    </div>
+                </div>
+            `,
+            
+            data() {
+                return {
+                    activeTab: 'generate',
+                    tabs: [
+                        { id: 'generate', name: 'Generate Story', icon: '✨' },
+                        { id: 'library', name: 'Story Library', icon: '📖' },
+                        { id: 'characters', name: 'Characters', icon: '🎭' },
+                        { id: 'search', name: 'Search Books', icon: '🔍' },
+                        { id: 'pipeline', name: 'Pipeline Status', icon: '⚙️' }
+                    ],
+                    stats: {
+                        generated_stories: 0,
+                        total_characters: 0
+                    }
+                };
+            },
+            
+            computed: {
+                currentTabComponent() {
+                    return this.activeTab + '-tab';
+                }
+            },
+            
+            async mounted() {
+                await this.loadStats();
+                // Refresh stats every 30 seconds
+                setInterval(() => this.loadStats(), 30000);
+            },
+            
+            methods: {
+                async loadStats() {
+                    try {
+                        const response = await fetch('/api/stats');
+                        this.stats = await response.json();
+                    } catch (error) {
+                        console.error('Error loading stats:', error);
+                    }
+                }
+            }
+        };
+
+        // Import all component code from the previous artifact
+        // This would be the actual component implementations
+        
+        // For demonstration, here's a simplified version
+        // In production, you'd split these into separate files
+        
+        // ============================================================================
+        // Create and Mount App
+        // ============================================================================
+        
+        const app = createApp(App);
+        
+        // This is where you'd import and register all the tab components
+        // from the previous artifact (GenerateTab, LibraryTab, etc.)
+        
+        app.mount('#app');
+    </script>
+</body>
+</html>
