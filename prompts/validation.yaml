@@ -1,4 +1,3 @@
-
 messages:
   - role: system
     content: |
@@ -11,18 +10,125 @@ messages:
       - Use double quotes for all JSON keys and string values.
 
       KONG/DECK/KONNECT VALIDATION RULES:
-      - decK version must be 3.0: _format_version must be "3.0" (quoted string) and _transform should be true.
-      - Plugin PRIORITY is not configurable in decK YAML. Do NOT validate numeric “priority” fields.
-        Instead:
-        * If ordering is required, validate use of Dynamic Plugin Ordering via plugin.ordering.before/after.
-        * Flag “priority comments” or invented priority fields as warnings/errors if they imply execution control.
-      - $(...) templates are allowed ONLY in string fields that support templates (request-transformer/response-transformer).
-        Flag any $(...) usage inside numeric plugin config fields (e.g., rate-limiting minute/hour/day) as an ERROR.
-      - Konnect/hybrid: flag rate-limiting policy=cluster as an ERROR (prefer redis or local).
-      - If multiple instances of the same plugin type are used, each must have a unique instance_name (otherwise conflict risk).
-      - key-auth credentials must be under consumers.keyauth_credentials (not a top-level misplaced section).
-      - Service/Route base path must not be duplicated incorrectly (service.path should not repeat route base path unless explicitly required).
-      - Ensure tags exist and are meaningful (warn if missing for services/routes/plugins).
+      
+      1. FORMAT VERSION VALIDATION:
+         - _format_version MUST be present and MUST be a quoted string: "3.0" (NOT 3.0 without quotes)
+         - _transform should be present and set to true
+         - ERROR if _format_version is missing or not a quoted string
+         - ERROR if _format_version is not "3.0"
+
+      2. PLUGIN PRIORITY VALIDATION (CRITICAL):
+         - Kong plugin priority is internal and NOT configurable via decK
+         - ERROR if any plugin has a "priority" field in its configuration
+         - ERROR if any YAML comment suggests manual priority configuration
+         - CORRECT: Use ordering.before or ordering.after for execution order control
+         - Validate ordering structure if present:
+           * Must be under plugin definition
+           * Must have before and/or after keys
+           * Must specify phase (access, rewrite, header_filter, body_filter, log)
+           * Must reference valid plugin names
+         - Common valid ordering patterns:
+           * key-auth/jwt → before → rate-limiting
+           * cors → before → other access phase plugins
+           * request-transformer → inherently before proxy
+           * response-transformer → inherently after proxy
+
+      3. TEMPLATE VALIDATION (CRITICAL):
+         - Templates $(...) are ONLY allowed in string fields of transformer plugins:
+           * request-transformer: add.headers, replace.headers, append.headers
+           * response-transformer: add.headers, replace.headers, append.headers
+           * request-transformer-advanced: add.headers, replace.headers, append.headers
+           * response-transformer-advanced: add.headers, replace.headers, append.headers
+         - ERROR if $(...) templates found in:
+           * rate-limiting numeric fields (minute, hour, day, month, year)
+           * rate-limiting plugin policy field
+           * cors origins array
+           * Any boolean field
+           * Any numeric field (except as string value in transformer headers)
+           * Plugin name or instance_name
+         - WARN if template syntax is malformed:
+           * Missing closing parenthesis
+           * Invalid variable reference
+           * Unsupported variable (check against Kong template variables list)
+         - Valid template examples:
+           * $(headers.Authorization)
+           * $(headers["X-Custom-Header"] or "default")
+           * $(consumer.username)
+           * $(uri_captures.id)
+
+      4. RATE LIMITING VALIDATION:
+         - Rate limiting limits MUST be static numeric values (integers > 0)
+         - ERROR if rate-limiting config has template/variable in numeric limit fields
+         - Validate policy field:
+           * policy: local → OK (single node)
+           * policy: redis → OK (requires Redis config, check redis_* fields present)
+           * policy: cluster → ERROR (not supported in Konnect/hybrid mode)
+         - For policy: redis, validate Redis configuration fields are present:
+           * redis_host or redis_sentinel_addresses
+           * redis_port (if using redis_host)
+           * redis_password (optional but recommended)
+         - WARN if very high limits that might cause issues
+         - If dynamic rate limiting needed, must be flagged in comments
+
+      5. CORS VALIDATION:
+         - origins field MUST be an array of static strings
+         - origins: ["*"] → OK (allow all, least secure - add WARNING)
+         - origins: ["http://example.com", "https://example.org"] → OK
+         - ERROR if origins contains templates like $(headers.Origin)
+         - ERROR if origins is not an array
+         - WARN if origins is ["*"] (security concern)
+         - For dynamic CORS origin reflection, must be documented in comments as requiring custom plugin
+
+      6. PLUGIN INSTANCE NAMING:
+         - If multiple instances of same plugin type on same entity (service/route), each MUST have unique instance_name
+         - ERROR if duplicate plugin types on same entity without unique instance_name
+         - instance_name MUST be a string (not number, not template)
+
+      7. AUTHENTICATION/CREDENTIALS VALIDATION:
+         - key-auth credentials MUST be under consumers.keyauth_credentials
+         - ERROR if keyauth_credentials is a top-level section
+         - ERROR if credentials are not associated with a consumer
+         - jwt_secrets MUST be under consumers.jwt_secrets
+         - oauth2_credentials MUST be under consumers.oauth2_credentials
+         - Validate credential structure per plugin type
+
+      8. SERVICE/ROUTE PATH VALIDATION:
+         - Service URL should include backend host and base path
+         - Route paths should be external API paths
+         - WARN if service.path and route.paths seem to duplicate the same base path
+         - ERROR if service.url is malformed (missing protocol, invalid URL)
+         - WARN if route.paths is empty or not defined
+
+      9. TAGGING VALIDATION:
+         - WARN if services lack tags (best practice for tracking)
+         - WARN if routes lack tags
+         - WARN if plugins lack tags
+         - Tags should be meaningful strings (not just numbers)
+
+      10. BUNDLING VALIDATION:
+          - Check comments for bundling claims
+          - Validate that bundled policies share:
+            * Same phase (request/response/access)
+            * Same condition bucket (same applicability)
+            * Compatible configuration (can be merged)
+          - WARN if bundling seems unsafe (different conditions, order dependencies)
+
+      11. KONNECT/HYBRID SPECIFIC:
+          - ERROR if rate-limiting uses policy: cluster
+          - WARN if using features not available in Konnect free tier
+          - Check workspace compatibility (_transform: true required)
+
+      12. SECURITY VALIDATION:
+          - WARN if no authentication plugins configured
+          - WARN if rate-limiting not configured (DoS risk)
+          - WARN if CORS allows all origins (["*"])
+          - ERROR if sensitive data in plaintext (API keys in config vs env vars)
+          - Check TLS configuration if applicable
+
+      13. PERFORMANCE VALIDATION:
+          - WARN if excessive plugins on same route (performance impact)
+          - Check for redundant transformations
+          - Validate caching configuration if present
 
   - role: user
     content: |
@@ -34,31 +140,82 @@ messages:
       **Generated Kong Configuration (YAML, trimmed):**
       {KONG_CONFIG}
 
-      Review for:
-      1. decK format compliance (version 3.0)
-      2. All Apigee policies covered
-      3. Correct plugin execution ordering (use ordering.before/after when needed; do not use priority numbers)
-      4. Security best practices      4. Security best practices
-      5. Performance considerations
-      6. Missing configurations
-      7. Potential issues
+      Perform comprehensive validation and return results in this JSON format:
 
-      Provide validation in JSON format:
       {{
-        "is_valid": true/false,
-        "errors": ["critical issues that must be fixed"],
-        "warnings": ["non-critical issues to address"],
-        "suggestions": ["optimization recommendations"],
-        "missing_policies": ["Apigee policies not covered"],
-        "security_concerns": ["security items to review"],
-        "performance_notes": ["performance considerations"]
+        "is_valid": true|false,
+        "format_version_check": {{
+          "valid": true|false,
+          "found": "value found or null",
+          "expected": "3.0",
+          "message": "explanation"
+        }},
+        "errors": [
+          {{
+            "type": "format|priority|template|rate-limiting|cors|credentials|path|other",
+            "severity": "critical|high",
+            "location": "where in config (e.g., plugins[0].config.minute)",
+            "message": "detailed error description",
+            "fix": "how to fix this error"
+          }}
+        ],
+        "warnings": [
+          {{
+            "type": "security|performance|best-practice|bundling|other",
+            "severity": "medium|low",
+            "location": "where in config",
+            "message": "warning description",
+            "recommendation": "how to address this warning"
+          }}
+        ],
+        "suggestions": [
+          {{
+            "category": "optimization|security|performance|maintainability",
+            "message": "suggestion description",
+            "benefit": "why this helps"
+          }}
+        ],
+        "missing_policies": [
+          {{
+            "apigee_policy": "policy name from analysis",
+            "policy_type": "Apigee policy type",
+            "reason": "why not found in Kong config",
+            "action_needed": "what to do about it"
+          }}
+        ],
+        "security_concerns": [
+          {{
+            "concern": "security issue description",
+            "severity": "critical|high|medium|low",
+            "mitigation": "how to address"
+          }}
+        ],
+        "performance_notes": [
+          {{
+            "observation": "performance-related observation",
+            "impact": "potential impact",
+            "recommendation": "how to optimize"
+          }}
+        ],
+        "coverage_summary": {{
+          "total_apigee_policies": 0,
+          "mapped_to_kong": 0,
+          "missing": 0,
+          "requires_custom_plugin": 0
+        }}
       }}
 
-      Rules:
-      - "is_valid" is true only if all critical issues are resolved.
-      - List all missing or misconfigured policies under "missing_policies".
-      - "errors" are critical and must be fixed before migration.
-      - "warnings" are non-critical but should be addressed.
-      - "suggestions" are for optimization or best practices.
-      - "security_concerns" should include any risks or gaps.
-      - "performance_notes" should mention any performance-related considerations.
+      Validation Rules:
+      1. "is_valid" is false if ANY critical errors exist
+      2. Check _format_version is exactly "3.0" (quoted string)
+      3. NO "priority" fields should exist - flag as ERROR
+      4. Templates $(...) only in transformer string fields - flag violations as ERROR
+      5. Rate limiting limits must be static numbers - flag templates as ERROR
+      6. CORS origins must be static array - flag templates as ERROR
+      7. Check all Apigee policies are covered or explicitly flagged as not needed
+      8. Validate plugin ordering.before/after structure if present
+      9. Check credentials are properly associated with consumers
+      10. Validate Redis config if rate-limiting policy is redis
+      11. Flag policy: cluster as ERROR for rate-limiting
+      12. All errors must have a "fix" field with actionable guidance
+      13. All warnings must have a "recommendation" field
