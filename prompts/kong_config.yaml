@@ -31,44 +31,39 @@ messages:
           after:
             access:
               - plugin-name
-      - Only add ordering constraints when there is a documented dependency (e.g., rate-limiting must run after authentication)
+      - Only add ordering constraints when there is a documented dependency
       - Common ordering requirements:
-        * key-auth/jwt/oauth2 → BEFORE → rate-limiting
-        * cors → BEFORE → other plugins in access phase
-        * request-transformer → BEFORE → proxy (inherent)
-        * response-transformer → AFTER → proxy (inherent)
+        * key-auth/jwt/oauth2 BEFORE rate-limiting
+        * cors BEFORE other plugins in access phase
+        * request-transformer BEFORE proxy (inherent)
+        * response-transformer AFTER proxy (inherent)
 
       TEMPLATE RULES (CRITICAL):
-      - Kong templates use $(variable_name) or $(variable_name or "default") syntax
+      - Kong templates use dollar-sign-parentheses syntax for variables
       - Templates are ONLY supported in these plugins and fields:
         * request-transformer: add.headers, replace.headers, append.headers
         * response-transformer: add.headers, replace.headers, append.headers
         * request-transformer-advanced: add.headers, replace.headers, append.headers (Enterprise only)
         * response-transformer-advanced: add.headers, replace.headers, append.headers (Enterprise only)
       - Templates are NOT supported in:
-        * Numeric fields (e.g., rate-limiting minute, hour, day limits)
+        * Numeric fields (rate-limiting minute, hour, day limits)
         * Boolean fields
         * Array items (except header values in transformer plugins)
         * Plugin names or instance_name
-      - For headers, use bracket notation for headers with special characters:
-        $(headers["X-Custom-Header"] or "default-value")
+      - For headers, use bracket notation for headers with special characters
       - Available template variables:
-        * $(headers.header_name) or $(headers["Header-Name"])
-        * $(uri_captures.name)
-        * $(query_params.param_name)
-        * $(consumer.username)
-        * $(consumer.id)
-        * $(service.name)
-        * $(route.name)
+        * headers.header_name or headers with brackets
+        * uri_captures.name
+        * query_params.param_name
+        * consumer.username
+        * consumer.id
+        * service.name
+        * route.name
 
       RATE LIMITING RULES (CRITICAL):
       - Rate limiting limits MUST be static numeric values
-      - NEVER use templates or variables in rate-limiting numeric fields:
-        ❌ WRONG: minute: $(headers["X-Rate-Limit"] or 100)
-        ✅ CORRECT: minute: 100
-      - For dynamic/per-consumer rate limits:
-        * Use consumer-specific rate-limiting configuration
-        * Or require a custom plugin (flag this in comments)
+      - NEVER use templates or variables in rate-limiting numeric fields
+      - For dynamic rate limits use consumer-specific rate-limiting configuration or require a custom plugin (flag this in comments)
       - rate-limiting policy options:
         * policy: local (single node, no shared state)
         * policy: redis (shared across nodes, requires Redis)
@@ -77,11 +72,11 @@ messages:
 
       CORS RULES (CRITICAL):
       - cors plugin supports:
-        * origins: ["http://example.com", "https://example.org"]
-        * origins: ["*"] (allow all - least secure)
+        * origins: list of static origin strings
+        * origins with wildcard for allow all (least secure)
       - CORS does NOT support:
         * Dynamic origin reflection (echoing request Origin header)
-        * $(headers.Origin) templates in origins field
+        * Template syntax in origins field
       - For dynamic CORS reflection:
         * Use explicit allowlist of known origins in origins array
         * OR flag need for post-function/custom plugin in comments
@@ -96,29 +91,20 @@ messages:
         5. The Kong plugin natively supports all the operations
       
       - Example of SAFE bundling:
-        * Three AssignMessage policies in the same request flow, same condition → single request-transformer
-        * Two quota policies with same limits, same flow → might bundle if semantics identical
+        * Three AssignMessage policies in the same request flow, same condition to single request-transformer
+        * Two quota policies with same limits, same flow might bundle if semantics identical
       
       - Example of UNSAFE bundling (keep separate):
         * AssignMessage in different flows (different conditions)
         * Quota and Spike Arrest (different enforcement semantics)
-        * Policies with order dependencies (e.g., set variable then use it)
+        * Policies with order dependencies
       
-      - For each bundled plugin, add a YAML comment:
-        # Bundled from Apigee policies: PolicyA, PolicyB, PolicyC (all same phase/condition)
+      - For each bundled plugin, add a YAML comment explaining the bundling
       
-      - If bundling is not safe, keep plugins separate and add comment:
-        # Separate plugin instance required: different condition/phase from other policies
+      - If bundling is not safe, keep plugins separate and add comment explaining why
 
       PLUGIN NAMING RULES:
-      - If multiple instances of the same plugin type exist on the same entity (service/route), each MUST have a unique instance_name:
-        plugins:
-          - name: request-transformer
-            instance_name: set-auth-headers
-            config: {...}
-          - name: request-transformer
-            instance_name: set-correlation-id
-            config: {...}
+      - If multiple instances of the same plugin type exist on the same entity (service/route), each MUST have a unique instance_name
 
       KONNECT/HYBRID SAFETY:
       - Avoid rate-limiting policy: cluster (not supported in Konnect/hybrid)
@@ -132,146 +118,48 @@ messages:
             keyauth_credentials:
               - key: "secret-api-key"
       - NOT as a top-level section
-      - Consumer groups for role-based rate limits:
-        consumer_groups:
-          - name: premium
-            consumers:
-              - username: api-consumer
+      - Consumer groups for role-based rate limits
 
       SERVICE/ROUTE BEST PRACTICES:
-      - Service path should be the backend path (not the proxy base path):
-        services:
-          - name: backend-api
-            url: https://backend.example.com/api/v1
-            # NOT: path: /api/v1 (this is in the URL)
-      
-      - Route paths are the external API paths:
-        routes:
-          - name: users-api
-            service: backend-api
-            paths:
-              - /api/v1/users
-      
+      - Service path should be the backend path (not the proxy base path)
+      - Route paths are the external API paths
       - Avoid duplicating base path in both service and route
 
       TAGGING STRATEGY:
-      - Add meaningful tags to all entities for tracking:
-        services:
-          - name: users-service
-            tags:
-              - apigee-proxy:user-management
-              - environment:production
-              - team:platform
-        routes:
-          - name: users-route
-            tags:
-              - apigee-flow:getUsers
-              - public-api
-        plugins:
-          - name: rate-limiting
-            tags:
-              - apigee-policy:SpikeArrest-1
-              - rate-limit
+      - Add meaningful tags to all entities for tracking
 
       VALIDATION CHECKLIST (add as comment at bottom):
       # Validation Checklist:
-      # ✓ _format_version: "3.0" (quoted string)
-      # ✓ _transform: true
-      # ✓ No "priority" fields in plugins
-      # ✓ Dynamic Plugin Ordering used where needed (ordering.before/after)
-      # ✓ No templates in numeric/boolean fields
-      # ✓ Rate limiting uses static limits or custom plugin flagged
-      # ✓ CORS uses explicit allowlist or custom plugin flagged
-      # ✓ Multiple plugin instances have unique instance_name
-      # ✓ rate-limiting policy: redis (not cluster for Konnect)
-      # ✓ Credentials under consumers.keyauth_credentials
-      # ✓ Service URL does not duplicate route path
-      # ✓ All entities have meaningful tags
+      # - _format_version: "3.0" (quoted string)
+      # - _transform: true
+      # - No "priority" fields in plugins
+      # - Dynamic Plugin Ordering used where needed (ordering.before/after)
+      # - No templates in numeric/boolean fields
+      # - Rate limiting uses static limits or custom plugin flagged
+      # - CORS uses explicit allowlist or custom plugin flagged
+      # - Multiple plugin instances have unique instance_name
+      # - rate-limiting policy: redis (not cluster for Konnect)
+      # - Credentials under consumers.keyauth_credentials
+      # - Service URL does not duplicate route path
+      # - All entities have meaningful tags
 
   - role: user
     content: |
       Based on this Apigee proxy analysis, generate a complete Kong decK configuration.
 
-      **Analysis:**
+      Analysis:
       {ANALYSIS}
 
-      **Requirements:**
-      1. Generate valid decK YAML format (version 3.0) - _format_version MUST be quoted: "3.0"
+      Requirements:
+      1. Generate valid decK YAML format (version 3.0) with _format_version as quoted string "3.0"
       2. Start with _format_version: "3.0" and _transform: true at the very top
       3. Bundle multiple Apigee policies into single Kong plugins where SAFE (conservative bundling only)
-         - Example: Multiple AssignMessage in same condition/phase → single request-transformer with all transformations
-         - Add comment: # Bundled from Apigee policies: PolicyA, PolicyB
       4. Use appropriate Kong plugins for each policy
       5. Preserve exact business logic and flow order
       6. Use Dynamic Plugin Ordering (ordering.before/after) ONLY where documented dependencies exist
-         - Do NOT add "priority" fields
-         - Common patterns: auth before rate-limiting, cors before other access phase plugins
-      7. Handle runtime gaps explicitly:
-         - Dynamic rate limits (header-driven): Add comment flagging need for custom plugin
-         - Dynamic CORS reflection: Use explicit allowlist or flag custom plugin need
-         - Templates only in transformer header fields, never in numeric/boolean fields
+      7. Handle runtime gaps explicitly with comments
       8. Configure plugin at appropriate level (service, route, consumer, consumer_group)
-      9. Add meaningful tags for tracking (service, route, plugin tags)
-      10. Include YAML comments explaining:
-          - Bundling decisions
-          - Runtime gaps and workarounds
-          - Why certain plugins are separate
-          - Any manual configuration needed
+      9. Add meaningful tags for tracking
+      10. Include YAML comments explaining bundling decisions and runtime gaps
 
-      **Output Structure:**
-      ```yaml
-      _format_version: "3.0"  # MUST be quoted string
-      _transform: true
-
-      services:
-        - name: service-name
-          url: https://backend.example.com/path
-          tags:
-            - apigee-proxy:proxy-name
-          # ... service config
-
-      routes:
-        - name: route-name
-          service: service-name
-          paths:
-            - /api/path
-          tags:
-            - apigee-flow:flow-name
-          # ... route config
-
-      plugins:
-        - name: plugin-name
-          # instance_name: unique-name  # Only if multiple instances of same type
-          service: service-name  # or route: route-name
-          config:
-            # ... plugin configuration
-          # ordering:  # Only if dependency exists
-          #   before:
-          #     access:
-          #       - other-plugin
-          tags:
-            - apigee-policy:policy-name
-
-      consumers:
-        - username: consumer-name
-          keyauth_credentials:
-            - key: "api-key-value"
-          tags:
-            - consumer-type
-
-      # consumer_groups:  # If role-based rate limiting needed
-      #   - name: group-name
-      #     consumers:
-      #       - username: consumer-name
-
-      # Validation Checklist:
-      # ✓ _format_version: "3.0" (quoted string)
-      # ✓ _transform: true
-      # ✓ No "priority" fields
-      # ✓ ordering.before/after only where needed
-      # ✓ No templates in numeric/boolean fields
-      # ✓ rate-limiting policy: redis (for Konnect)
-      # ✓ All runtime gaps documented in comments
-      ```
-
-      Output ONLY the YAML configuration with inline comments. No markdown fences, no surrounding text.
+      Output ONLY valid decK YAML with inline comments. No markdown fences, no surrounding text.
