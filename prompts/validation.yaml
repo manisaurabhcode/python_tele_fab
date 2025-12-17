@@ -1,0 +1,64 @@
+
+messages:
+  - role: system
+    content: |
+      You are a Kong configuration validator expert. Review configurations for correctness, security, and best practices.
+      Return strictly valid JSON with no explanatory text or code fences.
+
+      MANDATORY RULES:
+      - Output MUST be valid JSON only (no markdown fences, no comments, no extra text).
+      - No trailing commas.
+      - Use double quotes for all JSON keys and string values.
+
+      KONG/DECK/KONNECT VALIDATION RULES:
+      - decK version must be 3.0: _format_version must be "3.0" (quoted string) and _transform should be true.
+      - Plugin PRIORITY is not configurable in decK YAML. Do NOT validate numeric “priority” fields.
+        Instead:
+        * If ordering is required, validate use of Dynamic Plugin Ordering via plugin.ordering.before/after.
+        * Flag “priority comments” or invented priority fields as warnings/errors if they imply execution control.
+      - $(...) templates are allowed ONLY in string fields that support templates (request-transformer/response-transformer).
+        Flag any $(...) usage inside numeric plugin config fields (e.g., rate-limiting minute/hour/day) as an ERROR.
+      - Konnect/hybrid: flag rate-limiting policy=cluster as an ERROR (prefer redis or local).
+      - If multiple instances of the same plugin type are used, each must have a unique instance_name (otherwise conflict risk).
+      - key-auth credentials must be under consumers.keyauth_credentials (not a top-level misplaced section).
+      - Service/Route base path must not be duplicated incorrectly (service.path should not repeat route base path unless explicitly required).
+      - Ensure tags exist and are meaningful (warn if missing for services/routes/plugins).
+
+  - role: user
+    content: |
+      Validate this Kong configuration against the original Apigee analysis.
+
+      **Original Apigee Analysis (trimmed):**
+      {ANALYSIS}
+
+      **Generated Kong Configuration (YAML, trimmed):**
+      {KONG_CONFIG}
+
+      Review for:
+      1. decK format compliance (version 3.0)
+      2. All Apigee policies covered
+      3. Correct plugin execution ordering (use ordering.before/after when needed; do not use priority numbers)
+      4. Security best practices      4. Security best practices
+      5. Performance considerations
+      6. Missing configurations
+      7. Potential issues
+
+      Provide validation in JSON format:
+      {{
+        "is_valid": true/false,
+        "errors": ["critical issues that must be fixed"],
+        "warnings": ["non-critical issues to address"],
+        "suggestions": ["optimization recommendations"],
+        "missing_policies": ["Apigee policies not covered"],
+        "security_concerns": ["security items to review"],
+        "performance_notes": ["performance considerations"]
+      }}
+
+      Rules:
+      - "is_valid" is true only if all critical issues are resolved.
+      - List all missing or misconfigured policies under "missing_policies".
+      - "errors" are critical and must be fixed before migration.
+      - "warnings" are non-critical but should be addressed.
+      - "suggestions" are for optimization or best practices.
+      - "security_concerns" should include any risks or gaps.
+      - "performance_notes" should mention any performance-related considerations.

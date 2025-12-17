@@ -1,0 +1,126 @@
+
+messages:
+  - role: system
+    content: |
+      You are an expert in Apigee API Gateway with deep knowledge of API management patterns.
+      Analyze the provided Apigee proxy configuration comprehensively.
+
+      OUTPUT RULES (MANDATORY):
+      - Return strictly valid JSON only (no markdown, no comments, no extra text).
+      - Do not wrap JSON in code fences.
+      - Do not include trailing commas.
+      - Use double quotes for all JSON keys and string values.
+
+      ANALYSIS RULES (MANDATORY):
+      - Identify flow-level and step-level conditions and preserve semantics.
+      - For every flow, capture its "condition" exactly as in Apigee (or "true" if unconditional).
+      - For every policy, detect:
+        * execution phase: request|response|access|log|other
+        * condition_level: flow|step|none
+        * condition_expression: the Apigee condition that gates execution (inherit flow condition if policy has none)
+      - Bundling must be CONSERVATIVE:
+        * A policy can be marked can_be_bundled=true only if it shares the same phase AND the same condition bucket as its bundling candidates.
+        * Never bundle across different flows or different step conditions.
+      - Detect runtime gaps where Kong cannot reproduce behavior natively and must use post-function/custom plugin:
+        * header-driven quota / per-request dynamic rate limits
+        * dynamic CORS origin reflection
+        * Java/JS callouts and variable manipulations not expressible with standard plugins
+
+      JSON SHAPE RULES (MANDATORY):
+      - Produce the JSON object using the exact top-level keys shown in the user template.
+      - You MAY add additional top-level keys ONLY from this allowlist:
+        ["bundling_constraints", "routing_plan", "runtime_gaps"]
+      - Do not add any other top-level keys.
+
+  - role: user
+    content: |
+      Analyze this Apigee proxy/shared flow bundle.
+
+      **Scoring Rules:**
+      {SCORING_RULES}
+
+      **Bundle Contents (trimmed):**
+      {PROXY_CONTENTS}
+
+      Produce comprehensive analysis in JSON format:
+      {{
+        "proxy_overview": {{
+          "name": "proxy name",
+          "base_path": "base path",
+          "target_endpoint": "backend URL",
+          "description": "what this proxy does",
+          "complexity" : "Low|Medium|High",
+          "complexity_reason": "<one or two sentences explaining the top scoring contributors and any overrides>"
+        }},
+        "policies_analysis": [
+          {{
+            "policy_name": "name",
+            "policy_type": "type",
+            "purpose": "what it does",
+            "configuration": {{}},
+            "dependencies": ["other policies it depends on"],
+
+            "phase": "request|response|access|log|other",
+            "condition_level": "flow|step|none",
+            "condition_expression": "apigee condition string or true",
+
+            "can_be_bundled": true,
+            "bundling_candidates": ["policies that could be bundled together"]
+          }}
+        ],
+        "custom_code_analysis": [
+          {{
+            "file": "filename",
+            "purpose": "what it does",
+            "complexity": "low|medium|high",
+            "kong_approach": "native|native_with_ordering|post-function|custom-plugin"
+          }}
+        ],
+        "flows": [
+          {{
+            "flow_name": "name",
+            "condition": "when it runs",
+            "policies": ["policy sequence"]
+          }}
+        ],
+        "security": {{
+          "authentication": "method used",
+          "authorization": "authorization approach",
+          "threat_protection": ["threat protection mechanisms"]
+        }},
+        "bundling_opportunities": [
+          {{
+            "bundle_name": "descriptive name",
+            "policies": ["policy1", "policy2"],
+            "reason": "why these should be bundled",
+            "single_plugin": "Kong plugin that handles all",
+            "phase": "request|response|access|log|other",
+            "condition_bucket": "same condition group identifier used to justify conservative bundling"
+          }}
+        ],
+
+        "bundling_constraints": [
+          {{
+            "policies": ["policyA", "policyB"],
+            "why_not_bundle": "different flow/step conditions or different phases or dependency/order risk"
+          }}
+        ],
+
+        "routing_plan": [
+          {{
+            "route_name": "suggested route name",
+            "match_basis": "paths|methods|hosts|headers|query|expression|unknown",
+            "match_detail": "brief suggestion for how to model flow/step condition in Kong route scope",
+            "priority_hint": 0
+          }}
+        ],
+
+        "runtime_gaps": [
+          {{
+            "behavior": "e.g. header-driven quota or dynamic CORS reflection",
+            "apigee_mechanism": "policy/variable/condition causing this behavior",
+            "kong_limitation": "why native plugins are insufficient",
+            "recommended_approach": "post-function|custom-plugin"
+          }}
+        ]
+      }}

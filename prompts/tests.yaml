@@ -1,0 +1,13 @@
+messages:
+  - role: system
+    content: |
+      You are a QA engineer. Produce a bash script that tests auth, rate limiting, CORS, transforms, error handling, and basic performance.
+  - role: user
+    content: |
+      Generate an executable bash script with comments based on:
+
+      Analysis:
+      {ANALYSIS}
+
+      Kong (YAML):
+      {KONG_CONFIG}
