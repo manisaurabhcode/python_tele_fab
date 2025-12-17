@@ -1,4 +1,3 @@
-
 messages:
   - role: system
     content: |
@@ -10,46 +9,71 @@ messages:
       - No trailing commas.
       - Use double quotes for all JSON keys and string values.
 
+      MANDATORY POLICY COUNTING RULES:
+      - Count ONLY actual Apigee policies from policies_analysis array
+      - Do NOT count flows, routes, or other non-policy entities
+      - Do NOT double-count policies that appear in multiple flows
+      - Each unique policy_name in policies_analysis counts as ONE policy
+      
+      POLICY TYPES TO COUNT:
+      - AssignMessage, Quota, SpikeArrest, VerifyAPIKey, OAuthV2, RaiseFault
+      - ExtractVariables, ServiceCallout, JavaScript, JavaCallout, Python
+      - XMLToJSON, JSONToXML, MessageLogging, Statistics, AccessControl
+      - CORS, ResponseCache, KeyValueMapOperations, and all other policy types
+      
+      ENTITIES NOT TO COUNT AS POLICIES:
+      - Flows (PreFlow, PostFlow, Conditional Flows)
+      - Routes or routing configurations
+      - Target endpoints or backend URLs
+      - Proxy endpoints
+      - Resources or resource files
+
       MANDATORY ANALYSIS RULES:
-      - "total_policies" MUST equal the provided POLICY_COUNT.
+      - "total_policies" MUST equal the count of unique policies in policies_analysis array
       - A policy is considered "mapped to Kong" if it is implemented via:
         * a Kong plugin (kong_plugin != null), OR
-        * native Kong entity config (service/route/upstream/consumer/consumer_group) with kong_plugin = null.
-      - "coverage_percentage" = (number of policies mapped to Kong / total_policies) × 100, rounded to nearest integer.
-      - For "bundled_with", list ONLY other Apigee policies collapsed into the same single Kong construct (same plugin instance or same non-plugin construct).
+        * native Kong entity config (service/route/upstream/consumer/consumer_group) with kong_plugin = null
+      - "coverage_percentage" = (number of policies mapped to Kong / total_policies) × 100, rounded to nearest integer
+      - For "bundled_with", list ONLY other Apigee policies collapsed into the same single Kong construct (same plugin instance or same non-plugin construct)
       - Bundling must be CONSERVATIVE:
-        * Only count as bundled when policies share the same phase and same flow/step condition bucket (as implied by the analysis),
-          and they are implemented by a single Kong construct.
+        * Only count as bundled when policies share the same phase and same flow/step condition bucket,
+          and they are implemented by a single Kong construct
       - If behavior requires runtime logic not supported natively (e.g., header-driven quota, dynamic CORS origin reflection),
-        then set "requires_custom_plugin" = true and populate "custom_plugin_name" if known, else null.
-      - Set "auto_generated" = true only when the mapping is fully achievable with standard Kong constructs without manual logic changes.
+        then set "requires_custom_plugin" = true and populate "custom_plugin_name" if known, else null
+      - Set "auto_generated" = true only when the mapping is fully achievable with standard Kong constructs without manual logic changes
 
   - role: user
     content: |
-      Analyze migration coverage for this Apigee → Kong migration.
+      Analyze migration coverage for this Apigee to Kong migration.
 
-      **Apigee Analysis (trimmed JSON):**
+      **Apigee Analysis:**
       {ANALYSIS}
 
-      **Kong Configuration (YAML, trimmed):**
+      **Kong Configuration (YAML):**
       {KONG_CONFIG}
 
-      **Detected Apigee Policies (from analysis):**
-      Count: {POLICY_COUNT}
-      List:
+      **Policy Counting Instructions:**
+      1. Extract the policies_analysis array from the Apigee analysis
+      2. Count the number of unique policy entries (by policy_name)
+      3. This count is your total_policies value
+      4. Each policy in policies_analysis must be accounted for in policy_mappings
+
+      **Expected Policy Count:** {POLICY_COUNT}
+      
+      **Policies to Map:**
       {POLICY_LIST}
 
-      Produce a single JSON object with the following structure (use these keys exactly):
+      Produce a single JSON object with the following structure:
 
       {
-        "total_policies": <number>,
+        "total_policies": <number - MUST equal POLICY_COUNT above>,
         "policy_mappings": [
           {
-            "apigee_policy": "policy name",
-            "apigee_policy_type": "policy type",
-            "kong_solution": "how it is handled (route/service/plugin/config)",
+            "apigee_policy": "policy name from policies_analysis",
+            "apigee_policy_type": "policy type (e.g., AssignMessage, Quota)",
+            "kong_solution": "how it is handled (route/service/plugin/config/not-required)",
             "kong_plugin": "plugin name or null",
-            "bundled_with": ["other policies that were bundled together"],
+            "bundled_with": ["other Apigee policies bundled into same Kong construct"],
             "auto_generated": true/false,
             "confidence": <0.0-1.0>,
             "requires_custom_plugin": true/false,
@@ -58,18 +82,45 @@ messages:
           }
         ],
         "bundling_analysis": {
-          "total_bundles": <number>,
-          "bundled_policies_count": <number>,
-          "efficiency_gain": "<percentage of reduced plugin count>"
+          "total_bundles": <number of distinct Kong constructs that bundle multiple policies>,
+          "bundled_policies_count": <total number of Apigee policies that were bundled>,
+          "unbundled_policies_count": <policies implemented as separate Kong constructs>,
+          "efficiency_gain": "<percentage showing reduction in construct count due to bundling>"
         },
-        "not_required_policies": ["policies not needed in Kong"],
-        "coverage_percentage": <0-100>
+        "not_required_policies": [
+          {
+            "apigee_policy": "policy name",
+            "apigee_policy_type": "policy type",
+            "reason": "why not needed in Kong (e.g., handled by Kong natively, no equivalent needed)"
+          }
+        ],
+        "coverage_percentage": <0-100>,
+        "coverage_breakdown": {
+          "fully_automated": <count of policies with auto_generated=true>,
+          "requires_custom_plugin": <count of policies with requires_custom_plugin=true>,
+          "not_required": <count of policies in not_required_policies>,
+          "manual_configuration": <count of policies that need manual setup>
+        }
       }
 
-      Rules:
-      - "total_policies" MUST equal {POLICY_COUNT}.
-      - "coverage_percentage" = (number of policies mapped to Kong / total_policies) × 100, rounded to nearest integer.
-      - For "bundled_with", list ONLY other Apigee policies collapsed into a single Kong construct.
-      - If a policy maps to native Kong routing/service config, set "kong_plugin" = null and describe "kong_solution".
-      - Output MUST be valid JSON (no comments, no markdown fences, no trailing commas).
+      **Critical Rules:**
+      1. total_policies MUST equal {POLICY_COUNT} exactly
+      2. Every policy from the POLICY_LIST must appear in either:
+         - policy_mappings array, OR
+         - not_required_policies array
+      3. The sum of all policies across both arrays must equal total_policies
+      4. coverage_percentage = (policies in policy_mappings / total_policies) × 100
+      5. For bundled_with, only list OTHER policies bundled WITH this one (not the policy itself)
+      6. If a policy maps to native Kong routing/service config, set kong_plugin = null
+      7. efficiency_gain = ((bundled_policies_count - total_bundles) / total_policies) × 100
+      
+      **Example of Bundling:**
+      If 3 AssignMessage policies (AM-1, AM-2, AM-3) are bundled into 1 request-transformer:
+      - Policy AM-1: bundled_with = ["AM-2", "AM-3"]
+      - Policy AM-2: bundled_with = ["AM-1", "AM-3"]
+      - Policy AM-3: bundled_with = ["AM-1", "AM-2"]
+      - bundled_policies_count = 3
+      - total_bundles = 1
+      - This contributes to efficiency_gain
 
+      Output MUST be valid JSON (no comments, no markdown fences, no trailing commas).
