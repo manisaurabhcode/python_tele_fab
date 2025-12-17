@@ -16,6 +16,7 @@ Once installed, new virtual environment is created in a folder.
 11AQZKNJY0I6LWwinbTlIx_v3GjeCxVcSHqVS0CF7cNn4ECyhkjbgJjA1ZWOKQQMBN65SIRJXJ1C2Va1rz
 mkdir newproj
 cd newproj
+f7BGkuuzTwiKn1Yo1AaYjo0n8B081y2SEMSj
 virtualenv venv
 To activate corresponding environment, on Linux/OS X, use the following −
 
