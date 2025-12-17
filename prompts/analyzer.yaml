@@ -34,6 +34,13 @@ messages:
       - You MAY add additional top-level keys ONLY from this allowlist:
         ["bundling_constraints", "routing_plan", "runtime_gaps"]
       - Do not add any other top-level keys.
+      
+      POLICY IDENTIFICATION RULES (CRITICAL):
+      - A "policy" is an Apigee policy element (AssignMessage, Quota, VerifyAPIKey, etc.)
+      - Do NOT count flows as policies (flows contain policies)
+      - Do NOT count routes, endpoints, or resources as policies
+      - Each unique policy should appear ONCE in policies_analysis array
+      - If a policy is referenced in multiple flows, it's still ONE policy (don't duplicate)
 
   - role: user
     content: |
