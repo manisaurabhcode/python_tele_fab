@@ -1,4 +1,3 @@
-
 messages:
   - role: system
     content: |
@@ -21,10 +20,14 @@ messages:
       - Bundling must be CONSERVATIVE:
         * A policy can be marked can_be_bundled=true only if it shares the same phase AND the same condition bucket as its bundling candidates.
         * Never bundle across different flows or different step conditions.
-      - Detect runtime gaps where Kong cannot reproduce behavior natively and must use post-function/custom plugin:
-        * header-driven quota / per-request dynamic rate limits
-        * dynamic CORS origin reflection
+        * Never bundle policies that have ordering dependencies.
+      - Detect runtime gaps where Kong cannot reproduce behavior natively:
+        * header-driven quota / per-request dynamic rate limits (e.g., using request.header.X-Rate-Limit)
+        * dynamic CORS origin reflection (echoing request Origin header)
+        * conditional rate limits based on runtime variables
         * Java/JS callouts and variable manipulations not expressible with standard plugins
+        * dynamic backend routing based on request content
+        * stateful session management requiring shared state
 
       JSON SHAPE RULES (MANDATORY):
       - Produce the JSON object using the exact top-level keys shown in the user template.
@@ -46,16 +49,16 @@ messages:
       {{
         "proxy_overview": {{
           "name": "proxy name",
-          "base_path": "base path",
+          "base_path": "base path (e.g., /api/v1/users)",
           "target_endpoint": "backend URL",
           "description": "what this proxy does",
-          "complexity" : "Low|Medium|High",
-          "complexity_reason": "<one or two sentences explaining the top scoring contributors and any overrides>"
+          "complexity": "Low|Medium|High",
+          "complexity_reason": "one or two sentences explaining the top scoring contributors and any overrides"
         }},
         "policies_analysis": [
           {{
             "policy_name": "name",
-            "policy_type": "type",
+            "policy_type": "type (e.g., AssignMessage, RaiseFault, Quota)",
             "purpose": "what it does",
             "configuration": {{}},
             "dependencies": ["other policies it depends on"],
@@ -64,8 +67,12 @@ messages:
             "condition_level": "flow|step|none",
             "condition_expression": "apigee condition string or true",
 
-            "can_be_bundled": true,
-            "bundling_candidates": ["policies that could be bundled together"]
+            "can_be_bundled": true|false,
+            "bundling_candidates": ["policies that could be bundled together"],
+            
+            "kong_native_support": true|false,
+            "requires_runtime_logic": false,
+            "runtime_logic_reason": "why native Kong plugins cannot handle this (if applicable)"
           }}
         ],
         "custom_code_analysis": [
@@ -73,18 +80,21 @@ messages:
             "file": "filename",
             "purpose": "what it does",
             "complexity": "low|medium|high",
-            "kong_approach": "native|native_with_ordering|post-function|custom-plugin"
+            "kong_approach": "native|native_with_ordering|post-function|custom-plugin",
+            "requires_runtime_variables": false,
+            "variables_used": ["list of Apigee variables accessed"]
           }}
         ],
         "flows": [
           {{
             "flow_name": "name",
-            "condition": "when it runs",
-            "policies": ["policy sequence"]
+            "condition": "when it runs (Apigee condition or true)",
+            "policies": ["policy sequence in execution order"],
+            "kong_route_strategy": "single-route|multi-route|expression-based"
           }}
         ],
         "security": {{
-          "authentication": "method used",
+          "authentication": "method used (API Key, OAuth2, JWT, etc.)",
           "authorization": "authorization approach",
           "threat_protection": ["threat protection mechanisms"]
         }},
@@ -95,7 +105,9 @@ messages:
             "reason": "why these should be bundled",
             "single_plugin": "Kong plugin that handles all",
             "phase": "request|response|access|log|other",
-            "condition_bucket": "same condition group identifier used to justify conservative bundling"
+            "condition_bucket": "same condition group identifier used to justify conservative bundling",
+            "safe_to_bundle": true|false,
+            "bundling_risk": "none|low|medium|high"
           }}
         ],
 
@@ -111,16 +123,19 @@ messages:
             "route_name": "suggested route name",
             "match_basis": "paths|methods|hosts|headers|query|expression|unknown",
             "match_detail": "brief suggestion for how to model flow/step condition in Kong route scope",
-            "priority_hint": 0
+            "priority_hint": 0,
+            "apigee_flow": "corresponding Apigee flow name"
           }}
         ],
 
         "runtime_gaps": [
           {{
-            "behavior": "e.g. header-driven quota or dynamic CORS reflection",
+            "behavior": "e.g., header-driven quota or dynamic CORS reflection",
             "apigee_mechanism": "policy/variable/condition causing this behavior",
             "kong_limitation": "why native plugins are insufficient",
-            "recommended_approach": "post-function|custom-plugin"
+            "recommended_approach": "post-function|custom-plugin",
+            "workaround_available": true|false,
+            "workaround_description": "description if available"
           }}
         ]
       }}
