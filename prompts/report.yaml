@@ -1,68 +1,574 @@
-
 messages:
   - role: system
     content: |
-      You are a technical documentation expert. Generate comprehensive, actionable migration reports.
+      You are a technical documentation expert specializing in API gateway migrations.
+      Generate comprehensive, actionable migration reports in Markdown format.
+      
       Output MUST be Markdown only (no JSON, no code fences around the entire document).
-      Use headings, lists, tables (if needed), and inline code snippets.
+      Use headings, lists, tables, and inline code snippets where appropriate.
 
       MANDATORY OUTPUT RULES:
       - Return Markdown only.
       - No JSON output.
       - Do not wrap the entire document in triple backticks.
-      - Inline code blocks/snippets are allowed where needed.
+      - Inline code blocks/snippets (```yaml, ```bash, etc.) are allowed and encouraged for examples.
+      - Use tables for comparison data.
+      - Use clear hierarchical headings (# ## ### ####).
 
       KONG KONNECT / decK REALITIES (MANDATORY TO REFLECT IN REPORT):
-      - decK YAML uses _format_version: "3.0" and _transform: true.
-      - Kong plugin "priority" is not configured in YAML; execution order is controlled via Dynamic Plugin Ordering (ordering.before/after) when needed.
-      - Rate-limiting numeric limits cannot be dynamically sourced from request headers.
-      - Dynamic CORS origin reflection (echo Origin) is not equivalent to simple wildcard; may require post-function/custom plugin or explicit allowlist.
-      - Bundling must be CONSERVATIVE: only bundle policies when same phase + same flow/step condition bucket + same scope.
+      
+      1. FORMAT VERSION:
+         - decK YAML uses _format_version: "3.0" (quoted string, not unquoted number)
+         - _transform: true enables Konnect workspace support
+         - Version 3.0 is required for Kong Gateway 3.x and Konnect
+      
+      2. PLUGIN EXECUTION ORDER:
+         - Kong plugin "priority" is NOT configured in decK YAML
+         - Execution order is controlled via Dynamic Plugin Ordering:
+           * ordering.before.{phase}: [plugin-list]
+           * ordering.after.{phase}: [plugin-list]
+         - Common patterns:
+           * Authentication plugins (key-auth, jwt, oauth2) run BEFORE rate-limiting
+           * CORS runs BEFORE other access phase plugins
+           * request-transformer inherently runs BEFORE proxying
+           * response-transformer inherently runs AFTER proxying
+         - Report must explain this clearly in Breaking Changes section
+      
+      3. TEMPLATE LIMITATIONS:
+         - $(...) templates work ONLY in transformer plugin string fields (headers)
+         - Templates DO NOT work in:
+           * Numeric fields (rate-limiting limits)
+           * Boolean fields
+           * Plugin names
+           * CORS origins array
+         - Report must document any Apigee dynamic behavior that requires custom plugins
+      
+      4. RATE LIMITING CONSTRAINTS:
+         - Rate limits MUST be static numeric values
+         - Header-driven dynamic quotas (e.g., request.header.X-Rate-Limit) NOT supported natively
+         - Options for dynamic rate limiting:
+           * Consumer-specific rate limits (configure per consumer)
+           * Consumer groups with different limits
+           * Custom plugin (required for truly dynamic/header-driven limits)
+         - Konnect/hybrid: policy: cluster NOT supported (use redis or local)
+      
+      5. CORS LIMITATIONS:
+         - Native cors plugin supports static origin allowlist only
+         - Dynamic origin reflection (echoing request Origin header) NOT supported natively
+         - Options:
+           * Use explicit allowlist of known origins
+           * Use ["*"] (least secure, warn about this)
+           * Custom plugin for dynamic reflection (if business requirement)
+      
+      6. BUNDLING RULES (CONSERVATIVE):
+         - Bundle policies ONLY when ALL conditions met:
+           * Same execution phase (request/response/access)
+           * Same flow/step condition bucket (same route/service applicability)
+           * Same scope
+           * No ordering dependencies
+           * Kong plugin natively supports all operations
+         - Examples:
+           * SAFE: 3 AssignMessage policies in same request flow → 1 request-transformer
+           * UNSAFE: AssignMessage in different flows → separate transformers
+           * UNSAFE: Policies with order dependencies → keep separate
+      
+      7. AUTHENTICATION:
+         - Credentials must be under consumers (not top-level)
+         - key-auth: consumers[].keyauth_credentials[]
+         - jwt: consumers[].jwt_secrets[]
+         - oauth2: consumers[].oauth2_credentials[]
+      
+      8. DEPLOYMENT MODEL:
+         - Konnect: fully managed control plane + data planes
+         - Hybrid: self-managed control plane + data planes
+         - Traditional: database-backed (PostgreSQL)
+         - decK: declarative configuration as code (version control friendly)
 
   - role: user
     content: |
       Generate a comprehensive migration report in Markdown format.
 
-      **Coverage:**
+      **Coverage Statistics:**
       - Total Policies: {TOTAL}
       - Auto-migrated: {AUTO} ({COVERAGE_PCT}%)
-      - Bundled: {BUNDLED}
+      - Bundled Policies: {BUNDLED}
       - Custom Plugins Required: {CUSTOM}
       - Bundling Efficiency: {EFFICIENCY}%
 
       **Apigee Analysis (trimmed):**
       {ANALYSIS}
 
-      Generate a professional migration report with these sections:
-      # Executive Summary
-      # Migration Coverage Analysis
-      ## Policy Mapping Details
-      ## Bundling Optimization
-      # Breaking Changes & Impact
-      # Manual Migration Steps (Critical First)
-      # Testing Strategy
-      # Deployment Plan
-      # Rollback Procedure
-      # Risk Assessment
-      # Timeline Estimate
-      # Success Criteria
+      Generate a professional, actionable migration report with these sections:
 
-      Guidance (MANDATORY):
-      - Be specific, actionable, and include concise YAML/code examples inline (small snippets only).
-      - Use provided coverage figures to ground conclusions and recommendations.
-      - Avoid generic prose; focus on concrete steps, risks, and success metrics.
+      # Apigee to Kong Konnect Migration Report
 
-      Content requirements (MANDATORY):
-      - In **Bundling Optimization**, describe conservative bundling rules (same phase + same condition bucket + same scope) and give 1–2 short examples of safe bundles.
-      - In **Breaking Changes & Impact**, explicitly call out:
-        * Plugin priority vs ordering.before/after (dynamic plugin ordering)
-        * Header-driven quotas/rate limits cannot be done natively with numeric config
-        * CORS origin reflection differences and recommended approach (allowlist vs post-function/custom plugin)
-      - In **Testing Strategy**, include tests that validate:
-        * authentication behavior
-        * rate-limiting behavior (including per-consumer/consumer-group if used)
-        * CORS preflight and allow-origin behavior
-        * request/response transformations correctness
-        * ordering assumptions (where ordering.before/after is used)
-      - In **Deployment Plan**, include a CI/CD-friendly workflow referencing decK sync/diff/validate and a staged rollout (dev → uat → prod).
-      - In **Rollback Procedure**, include decK state backup/restore guidance and reversal steps for plugin enablement and credentials.
+      ## Executive Summary
+      - High-level overview of migration scope
+      - Key statistics (policies, coverage, bundling efficiency)
+      - Overall complexity assessment (Low/Medium/High)
+      - Estimated effort and timeline
+      - Critical success factors
+
+      ## Migration Coverage Analysis
+      
+      ### Policy Mapping Overview
+      Table showing:
+      - Apigee policy count vs Kong plugin count
+      - Auto-generated vs manual configuration
+      - Bundling efficiency gained
+      
+      ### Detailed Policy Mappings
+      For each Apigee policy type:
+      - Apigee Policy → Kong Solution mapping
+      - Configuration approach (native plugin, custom plugin, not needed)
+      - Confidence level
+      - Any caveats or limitations
+      
+      ### Bundling Optimization
+      - Conservative bundling rules explanation
+      - Examples of safe bundles (with YAML snippets)
+      - Examples of why certain policies stay separate
+      - Efficiency gains from bundling
+      
+      ## Breaking Changes & Behavioral Differences
+      
+      ### Critical Breaking Changes
+      1. **Plugin Execution Order**
+         - Apigee: implicit flow order
+         - Kong: Dynamic Plugin Ordering (ordering.before/after)
+         - Impact: Must explicitly configure dependencies
+         - Example:
+           ```yaml
+           plugins:
+             - name: rate-limiting
+               ordering:
+                 after:
+                   access:
+                     - key-auth  # Rate limit runs after authentication
+           ```
+      
+      2. **Dynamic Rate Limiting**
+         - Apigee: Can use request.header.X-Rate-Limit for dynamic quotas
+         - Kong: Rate limits must be static numeric values
+         - Impact: Header-driven quotas require custom plugin
+         - Workaround: Consumer-specific limits or custom plugin
+      
+      3. **Dynamic CORS Origin Reflection**
+         - Apigee: Can echo request Origin header dynamically
+         - Kong: CORS plugin requires static origin allowlist
+         - Impact: Dynamic reflection requires custom plugin or explicit allowlist
+         - Options:
+           * Use explicit allowlist (recommended if known origins)
+           * Use ["*"] wildcard (least secure)
+           * Implement custom plugin (if truly dynamic needed)
+      
+      4. **Template Variable Support**
+         - Apigee: Rich variable interpolation across all policies
+         - Kong: Templates $(...) only in transformer plugin string fields
+         - Impact: Cannot template numeric/boolean fields or plugin names
+         - Example (WRONG):
+           ```yaml
+           # ❌ This does NOT work
+           config:
+             minute: $(headers["X-Rate-Limit"] or 100)
+           ```
+         - Example (CORRECT):
+           ```yaml
+           # ✅ This works (transformer headers only)
+           config:
+             add:
+               headers:
+                 - X-User: $(consumer.username or "anonymous")
+           ```
+      
+      5. **decK Format Version**
+         - Must use _format_version: "3.0" (quoted string)
+         - Missing quotes causes validation errors
+         - _transform: true required for Konnect workspaces
+      
+      ### Medium Impact Changes
+      - Service/Route path handling differences
+      - Authentication credential management (under consumers)
+      - Rate limiting policy options (redis vs local vs cluster)
+      
+      ### Low Impact Changes
+      - Tagging strategy
+      - Plugin naming conventions
+      - Configuration organization
+
+      ## Runtime Gaps & Custom Plugin Requirements
+      
+      For each runtime gap identified:
+      - **Behavior**: What Apigee does
+      - **Kong Limitation**: Why native plugins insufficient
+      - **Recommended Approach**: post-function vs custom plugin
+      - **Implementation Effort**: Low/Medium/High
+      - **Priority**: Critical/High/Medium/Low
+      
+      Example format:
+      ### Dynamic Quota Based on Request Headers
+      - **Apigee Mechanism**: Quota policy references request.header.X-Plan for limit
+      - **Kong Limitation**: rate-limiting plugin requires static numeric limits
+      - **Recommended Approach**: Custom Lua plugin to read header and enforce dynamic limit
+      - **Implementation Effort**: Medium (2-3 days for plugin development + testing)
+      - **Priority**: High (if required for business logic)
+
+      ## Manual Migration Steps
+      
+      Organized by priority (Critical First):
+      
+      ### Phase 1: Pre-Migration (Critical)
+      1. Environment setup
+      2. Credential migration planning
+      3. Testing environment preparation
+      
+      ### Phase 2: Configuration Migration (Critical)
+      1. decK configuration deployment
+      2. Plugin installation
+      3. Consumer and credential setup
+      
+      ### Phase 3: Validation (High Priority)
+      1. Configuration validation (deck validate)
+      2. Functional testing
+      3. Security validation
+      
+      ### Phase 4: Performance Testing (High Priority)
+      1. Load testing
+      2. Latency benchmarking
+      3. Plugin ordering validation
+      
+      ### Phase 5: Custom Plugin Development (If Needed)
+      1. Plugin specification
+      2. Development and unit testing
+      3. Integration testing
+      4. Deployment
+      
+      ### Phase 6: Go-Live (Critical)
+      1. Final validation
+      2. Traffic cutover plan
+      3. Monitoring and alerting
+      4. Rollback readiness
+
+      ## Testing Strategy
+      
+      ### Functional Testing
+      - Authentication flows (key-auth, JWT, OAuth2)
+      - Rate limiting enforcement
+        * Per-consumer limits
+        * Consumer group limits
+        * Verify static limits work correctly
+      - CORS preflight requests
+        * Verify allowed origins
+        * Test denied origins
+      - Request/response transformations
+        * Header additions/modifications
+        * Body transformations
+        * Template variable substitution (in supported fields)
+      - Routing correctness
+        * Path matching
+        * Method matching
+        * Header/query parameter conditions
+      
+      ### Security Testing
+      - Unauthorized access attempts
+      - Invalid credentials handling
+      - Rate limit bypass attempts
+      - CORS policy enforcement
+      - Threat protection validation
+      
+      ### Performance Testing
+      - Baseline latency measurement
+      - Load testing (concurrent requests)
+      - Rate limiting under load
+      - Plugin overhead measurement
+      - Ordering validation (ensure dependencies respected)
+      
+      ### Integration Testing
+      - End-to-end API flows
+      - Consumer authentication + rate limiting
+      - Error handling and responses
+      - Logging and monitoring integration
+      
+      Test scripts should cover:
+      ```bash
+      # Example test structure
+      #!/bin/bash
+      
+      # 1. Authentication tests
+      echo "Testing key-auth..."
+      curl -H "apikey: valid-key" http://kong:8000/api/test
+      
+      # 2. Rate limiting tests
+      echo "Testing rate limits..."
+      for i in {{1..10}}; do
+        curl -H "apikey: valid-key" http://kong:8000/api/test
+      done
+      
+      # 3. CORS tests
+      echo "Testing CORS preflight..."
+      curl -X OPTIONS -H "Origin: https://example.com" http://kong:8000/api/test
+      
+      # 4. Transformation tests
+      echo "Testing transformations..."
+      curl -H "apikey: valid-key" http://kong:8000/api/test -v | grep "X-Consumer-Username"
+      ```
+
+      ## Deployment Plan
+      
+      ### CI/CD Integration
+      1. **Version Control**: Store decK YAML in Git repository
+      2. **Validation Pipeline**:
+         ```bash
+         # In CI pipeline
+         deck validate --config kong.yaml
+         deck diff --config kong.yaml  # Compare with current state
+         ```
+      3. **Staged Deployment**:
+         - Dev environment: Full deployment + functional tests
+         - UAT environment: Deployment + integration tests
+         - Production: Blue-green or canary deployment
+      
+      ### Deployment Sequence
+      1. **Pre-deployment**:
+         - Backup current Kong configuration: `deck dump`
+         - Verify prerequisites (Redis, database, plugins installed)
+      2. **Deployment**:
+         ```bash
+         # Deploy to Konnect
+         deck sync --config kong.yaml --konnect-token $TOKEN
+         
+         # Or traditional Kong
+         deck sync --config kong.yaml --kong-addr http://kong:8001
+         ```
+      3. **Post-deployment**:
+         - Smoke tests
+         - Monitoring validation
+         - Rollback readiness check
+      
+      ### Environment-Specific Considerations
+      - **Konnect**: Use workspace isolation, manage via control plane
+      - **Hybrid**: Ensure control plane connectivity, certificate management
+      - **Traditional**: Database backup strategy, HA setup validation
+
+      ## Rollback Procedure
+      
+      ### Preparation
+      1. **Backup Current State**:
+         ```bash
+         # Before migration
+         deck dump --output-file kong-backup-$(date +%Y%m%d-%H%M%S).yaml
+         
+         # Backup custom plugins
+         tar -czf plugins-backup-$(date +%Y%m%d-%H%M%S).tar.gz /usr/local/share/lua/5.1/kong/plugins/custom-*
+         
+         # Backup consumer credentials
+         deck dump --select-tag consumer-credentials > credentials-backup.yaml
+         ```
+      
+      2. **Document Current Metrics**:
+         - Request rates
+         - Latency percentiles (p50, p95, p99)
+         - Error rates
+         - Active consumers
+      
+      ### Rollback Steps
+      1. **Immediate Rollback** (if critical issue detected):
+         ```bash
+         # Restore previous configuration
+         deck sync --config kong-backup-TIMESTAMP.yaml
+         
+         # Or reset to previous state
+         deck reset  # WARNING: Clears all config
+         deck sync --config kong-backup-TIMESTAMP.yaml
+         ```
+      
+      2. **Verify Rollback**:
+         - Run smoke tests
+         - Check error rates
+         - Validate authentication
+         - Confirm rate limiting working
+      
+      3. **Rollback Custom Plugins**:
+         ```bash
+         # Remove new plugins
+         rm -rf /usr/local/share/lua/5.1/kong/plugins/custom-plugin-name
+         
+         # Restore old plugins
+         tar -xzf plugins-backup-TIMESTAMP.tar.gz -C /
+         
+         # Restart Kong
+         kong restart
+         ```
+      
+      4. **Consumer Rollback**:
+         - Restore credentials from backup
+         - Verify consumer authentication
+         - Check consumer group memberships
+
+      ## Risk Assessment
+      
+      ### Critical Risks
+      | Risk | Likelihood | Impact | Mitigation |
+      |------|-----------|--------|------------|
+      | Dynamic rate limiting breaks | High | High | Implement custom plugin or switch to static limits |
+      | Plugin ordering issues | Medium | High | Use ordering.before/after explicitly, test thoroughly |
+      | CORS reflection incompatibility | Medium | Medium | Use explicit allowlist or custom plugin |
+      | Credential migration errors | Low | Critical | Automated migration script + validation |
+      | Performance degradation | Low | High | Load testing in UAT, canary deployment |
+      
+      ### Medium Risks
+      - Template variable usage in unsupported fields
+      - Rate limiting policy: cluster in Konnect (not supported)
+      - Missing plugin dependencies
+      - Insufficient Redis capacity for shared rate limiting
+      
+      ### Low Risks
+      - Tagging inconsistencies
+      - Plugin naming collisions
+      - Minor configuration drift
+
+      ## Timeline Estimate
+      
+      | Phase | Duration | Dependencies |
+      |-------|----------|--------------|
+      | Analysis & Planning | 1-2 days | Apigee proxy export |
+      | decK Configuration | 2-3 days | Analysis complete |
+      | Custom Plugin Development | 3-5 days | Specs finalized |
+      | Testing (Functional) | 2-3 days | Configuration deployed to UAT |
+      | Testing (Performance) | 1-2 days | Functional tests pass |
+      | UAT & Validation | 3-5 days | All testing complete |
+      | Production Deployment | 1 day | UAT sign-off |
+      | **Total** | **13-21 days** | - |
+      
+      Factors affecting timeline:
+      - Number of custom plugins needed: +2-5 days each
+      - Complex authentication flows: +1-3 days
+      - Extensive integration testing: +2-4 days
+      - Regulatory compliance validation: +3-7 days
+
+      ## Success Criteria
+      
+      ### Functional Success
+      - ✅ All Apigee policies mapped to Kong equivalents or documented as custom plugins
+      - ✅ 100% of critical API flows working correctly
+      - ✅ Authentication and authorization working as expected
+      - ✅ Rate limiting enforced correctly (static limits or custom plugin)
+      - ✅ CORS policies working (allowlist or custom reflection)
+      - ✅ Request/response transformations correct
+      - ✅ Error handling and responses match business requirements
+      
+      ### Performance Success
+      - ✅ Latency p95 within 10% of Apigee baseline (or better)
+      - ✅ Throughput meets or exceeds current levels
+      - ✅ Rate limiting overhead < 5ms per request
+      - ✅ No memory leaks or resource exhaustion under load
+      - ✅ Plugin ordering respects dependencies (validated via tests)
+      
+      ### Operational Success
+      - ✅ Monitoring and alerting configured
+      - ✅ Logs properly structured and queryable
+      - ✅ Rollback procedure validated
+      - ✅ Documentation complete (runbooks, troubleshooting guides)
+      - ✅ Team trained on Kong operations
+      
+      ### Configuration Success
+      - ✅ decK YAML passes `deck validate` with no errors
+      - ✅ _format_version: "3.0" (quoted string)
+      - ✅ No "priority" fields in plugin configs
+      - ✅ Templates only in supported fields (transformer headers)
+      - ✅ Rate limiting uses policy: redis or local (not cluster)
+      - ✅ All credentials properly associated with consumers
+      - ✅ Custom plugins packaged and documented
+
+      ## Appendix
+      
+      ### A. Common decK Validation Errors and Fixes
+      
+      **Error: Invalid format_version**
+      ```yaml
+      # ❌ WRONG
+      _format_version: 3.0
+      
+      # ✅ CORRECT
+      _format_version: "3.0"
+      ```
+      
+      **Error: Unknown field 'priority' in plugin**
+      ```yaml
+      # ❌ WRONG
+      plugins:
+        - name: rate-limiting
+          priority: 10  # Not supported!
+      
+      # ✅ CORRECT
+      plugins:
+        - name: rate-limiting
+          ordering:
+            after:
+              access:
+                - key-auth
+      ```
+      
+      **Error: Template in numeric field**
+      ```yaml
+      # ❌ WRONG
+      config:
+        minute: $(headers["X-Rate-Limit"] or 100)
+      
+      # ✅ CORRECT (requires custom plugin for dynamic limits)
+      config:
+        minute: 100  # Static value only
+      ```
+      
+      ### B. Plugin Ordering Reference
+      
+      Common ordering patterns:
+      ```yaml
+      # Authentication before rate limiting
+      - name: rate-limiting
+        ordering:
+          after:
+            access:
+              - key-auth
+              - jwt
+      
+      # CORS before other access plugins
+      - name: cors
+        ordering:
+          before:
+            access:
+              - rate-limiting
+              - key-auth
+      
+      # Multiple transformers with dependencies
+      - name: request-transformer
+        instance_name: set-consumer-header
+        ordering:
+          before:
+            access:
+              - another-transformer
+      ```
+      
+      ### C. Template Variable Reference
+      
+      Supported variables in transformer plugins:
+      - `$(headers.Header-Name)` or `$(headers["Header-Name"])`
+      - `$(uri_captures.name)` - from route path captures
+      - `$(query_params.param_name)`
+      - `$(consumer.username)`
+      - `$(consumer.id)`
+      - `$(service.name)`
+      - `$(route.name)`
+      - Use `or "default"` for fallback: `$(headers.X-Custom or "default-value")`
+      
+      ### D. Contact and Support
+      - Migration team: [team-email]
+      - Kong support: [support-channel]
+      - Documentation: https://docs.konghq.com/deck/
+      - Runbook: [link to operational runbook]
+
+      ---
+
+      **Report Generation Date**: {DATE}
+      **Migration Coverage**: {COVERAGE_PCT}%
+      **Bundling Efficiency**: {EFFICIENCY}%
