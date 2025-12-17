@@ -137,15 +137,7 @@ messages:
          - Apigee: implicit flow order
          - Kong: Dynamic Plugin Ordering (ordering.before/after)
          - Impact: Must explicitly configure dependencies
-         - Example:
-           ```yaml
-           plugins:
-             - name: rate-limiting
-               ordering:
-                 after:
-                   access:
-                     - key-auth  # Rate limit runs after authentication
-           ```
+         - Example: Rate limiting plugin can specify it runs after authentication using ordering.after.access
       
       2. **Dynamic Rate Limiting**
          - Apigee: Can use request.header.X-Rate-Limit for dynamic quotas
@@ -285,61 +277,24 @@ messages:
       
       ### Integration Testing
       - End-to-end API flows
-      - Consumer authentication + rate limiting
+      - Consumer authentication plus rate limiting
       - Error handling and responses
       - Logging and monitoring integration
       
-      Test scripts should cover:
-      ```bash
-      # Example test structure
-      #!/bin/bash
-      
-      # 1. Authentication tests
-      echo "Testing key-auth..."
-      curl -H "apikey: valid-key" http://kong:8000/api/test
-      
-      # 2. Rate limiting tests
-      echo "Testing rate limits..."
-      for i in {{1..10}}; do
-        curl -H "apikey: valid-key" http://kong:8000/api/test
-      done
-      
-      # 3. CORS tests
-      echo "Testing CORS preflight..."
-      curl -X OPTIONS -H "Origin: https://example.com" http://kong:8000/api/test
-      
-      # 4. Transformation tests
-      echo "Testing transformations..."
-      curl -H "apikey: valid-key" http://kong:8000/api/test -v | grep "X-Consumer-Username"
-      ```
+      Test scripts should cover authentication, rate limiting, CORS preflight, and transformations.
 
       ## Deployment Plan
       
       ### CI/CD Integration
       1. **Version Control**: Store decK YAML in Git repository
-      2. **Validation Pipeline**:
-         ```bash
-         # In CI pipeline
-         deck validate --config kong.yaml
-         deck diff --config kong.yaml  # Compare with current state
-         ```
-      3. **Staged Deployment**:
-         - Dev environment: Full deployment + functional tests
-         - UAT environment: Deployment + integration tests
-         - Production: Blue-green or canary deployment
+      2. **Validation Pipeline**: Use deck validate and deck diff commands
+      3. **Staged Deployment**: Deploy to Dev, then UAT, then Production environments
       
       ### Deployment Sequence
       1. **Pre-deployment**:
-         - Backup current Kong configuration: `deck dump`
+         - Backup current Kong configuration using deck dump
          - Verify prerequisites (Redis, database, plugins installed)
-      2. **Deployment**:
-         ```bash
-         # Deploy to Konnect
-         deck sync --config kong.yaml --konnect-token $TOKEN
-         
-         # Or traditional Kong
-         deck sync --config kong.yaml --kong-addr http://kong:8001
-         ```
+      2. **Deployment**: Use deck sync with appropriate configuration
       3. **Post-deployment**:
          - Smoke tests
          - Monitoring validation
@@ -353,17 +308,9 @@ messages:
       ## Rollback Procedure
       
       ### Preparation
-      1. **Backup Current State**:
-         ```bash
-         # Before migration
-         deck dump --output-file kong-backup-$(date +%Y%m%d-%H%M%S).yaml
-         
-         # Backup custom plugins
-         tar -czf plugins-backup-$(date +%Y%m%d-%H%M%S).tar.gz /usr/local/share/lua/5.1/kong/plugins/custom-*
-         
-         # Backup consumer credentials
-         deck dump --select-tag consumer-credentials > credentials-backup.yaml
-         ```
+      1. **Backup Current State**: Use deck dump to backup configuration before migration
+         Backup custom plugins by archiving plugin directories
+         Backup consumer credentials separately
       
       2. **Document Current Metrics**:
          - Request rates
@@ -373,14 +320,8 @@ messages:
       
       ### Rollback Steps
       1. **Immediate Rollback** (if critical issue detected):
-         ```bash
-         # Restore previous configuration
-         deck sync --config kong-backup-TIMESTAMP.yaml
-         
-         # Or reset to previous state
-         deck reset  # WARNING: Clears all config
-         deck sync --config kong-backup-TIMESTAMP.yaml
-         ```
+         Restore previous configuration using deck sync with backup file
+         Or reset to previous state with deck reset followed by deck sync
       
       2. **Verify Rollback**:
          - Run smoke tests
@@ -388,17 +329,7 @@ messages:
          - Validate authentication
          - Confirm rate limiting working
       
-      3. **Rollback Custom Plugins**:
-         ```bash
-         # Remove new plugins
-         rm -rf /usr/local/share/lua/5.1/kong/plugins/custom-plugin-name
-         
-         # Restore old plugins
-         tar -xzf plugins-backup-TIMESTAMP.tar.gz -C /
-         
-         # Restart Kong
-         kong restart
-         ```
+      3. **Rollback Custom Plugins**: Remove new plugins, restore old plugins, restart Kong
       
       4. **Consumer Rollback**:
          - Restore credentials from backup
@@ -485,90 +416,42 @@ messages:
       ### A. Common decK Validation Errors and Fixes
       
       **Error: Invalid format_version**
-      ```yaml
-      # ❌ WRONG
-      _format_version: 3.0
+      - WRONG: _format_version: 3.0 (unquoted)
+      - CORRECT: _format_version: "3.0" (quoted string)
       
-      # ✅ CORRECT
-      _format_version: "3.0"
-      ```
-      
-      **Error: Unknown field 'priority' in plugin**
-      ```yaml
-      # ❌ WRONG
-      plugins:
-        - name: rate-limiting
-          priority: 10  # Not supported!
-      
-      # ✅ CORRECT
-      plugins:
-        - name: rate-limiting
-          ordering:
-            after:
-              access:
-                - key-auth
-      ```
+      **Error: Unknown field priority in plugin**
+      - WRONG: Plugins with priority field (not supported)
+      - CORRECT: Use ordering.before or ordering.after for execution order
       
       **Error: Template in numeric field**
-      ```yaml
-      # ❌ WRONG
-      config:
-        minute: $(headers["X-Rate-Limit"] or 100)
-      
-      # ✅ CORRECT (requires custom plugin for dynamic limits)
-      config:
-        minute: 100  # Static value only
-      ```
+      - WRONG: Using dollar-sign-parentheses syntax in numeric rate limit fields
+      - CORRECT: Static numeric values only (requires custom plugin for dynamic limits)
       
       ### B. Plugin Ordering Reference
       
       Common ordering patterns:
-      ```yaml
-      # Authentication before rate limiting
-      - name: rate-limiting
-        ordering:
-          after:
-            access:
-              - key-auth
-              - jwt
+      - Authentication plugins (key-auth, jwt) run BEFORE rate-limiting
+      - CORS runs BEFORE other access phase plugins
+      - Request transformers run BEFORE proxying
+      - Response transformers run AFTER proxying
       
-      # CORS before other access plugins
-      - name: cors
-        ordering:
-          before:
-            access:
-              - rate-limiting
-              - key-auth
-      
-      # Multiple transformers with dependencies
-      - name: request-transformer
-        instance_name: set-consumer-header
-        ordering:
-          before:
-            access:
-              - another-transformer
-      ```
+      Use ordering.after.access to specify plugin runs after another in access phase
+      Use ordering.before.access to specify plugin runs before another in access phase
       
       ### C. Template Variable Reference
       
-      Supported variables in transformer plugins:
-      - `$(headers.Header-Name)` or `$(headers["Header-Name"])`
-      - `$(uri_captures.name)` - from route path captures
-      - `$(query_params.param_name)`
-      - `$(consumer.username)`
-      - `$(consumer.id)`
-      - `$(service.name)`
-      - `$(route.name)`
-      - Use `or "default"` for fallback: `$(headers.X-Custom or "default-value")`
+      Supported variables in transformer plugins (headers only):
+      - headers.Header-Name or headers with bracket notation
+      - uri_captures.name for route path captures
+      - query_params.param_name for query parameters
+      - consumer.username for authenticated consumer
+      - consumer.id for consumer identifier
+      - service.name for service name
+      - route.name for route name
+      - Use "or" for fallback values in templates
       
       ### D. Contact and Support
-      - Migration team: [team-email]
-      - Kong support: [support-channel]
+      - Migration team: Contact your platform team
+      - Kong support: https://support.konghq.com
       - Documentation: https://docs.konghq.com/deck/
-      - Runbook: [link to operational runbook]
-
-      ---
-
-      **Report Generation Date**: {DATE}
-      **Migration Coverage**: {COVERAGE_PCT}%
-      **Bundling Efficiency**: {EFFICIENCY}%
+      - Runbook: Reference operational documentation
