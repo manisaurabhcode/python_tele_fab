@@ -1,0 +1,14 @@
+sap-ai-sdk-gen[all]
+flask==3.0.0
+flask-cors==4.0.0
+python-dotenv==1.0.0
+dataclasses
+# Core LangChain library
+langchain>=0.0.296
+# OpenAI-specific implementation for Azure integrations
+langchain-openai>=0.1.0
+# Additional backend vector store
+langchain-core>=0.1.0
+# OpenAI API Python client
+openai>=0.27.10
+numpy>=1.21

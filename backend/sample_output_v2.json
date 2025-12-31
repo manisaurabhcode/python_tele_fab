@@ -1,0 +1,516 @@
+{
+  "coverage": {
+    "bundling_analysis": {
+      "bundled_policies_count": 7,
+      "efficiency_gain": "36%",
+      "total_bundles": 3
+    },
+    "coverage_percentage": 100,
+    "not_required_policies": [],
+    "policy_mappings": [
+      {
+        "apigee_policy": "SA-SpikeArrest",
+        "apigee_policy_type": "SpikeArrest",
+        "auto_generated": true,
+        "bundled_with": [
+          "impose-quota"
+        ],
+        "confidence": 0.95,
+        "custom_plugin_name": null,
+        "kong_plugin": "rate-limiting",
+        "kong_solution": "rate-limiting plugin",
+        "reasoning": "Bundled with quota policy into single rate-limiting plugin with second and month limits",
+        "requires_custom_plugin": false
+      },
+      {
+        "apigee_policy": "verify-api-key",
+        "apigee_policy_type": "VerifyAPIKey",
+        "auto_generated": true,
+        "bundled_with": [
+          "remove-query-param-apikey"
+        ],
+        "confidence": 0.98,
+        "custom_plugin_name": null,
+        "kong_plugin": "key-auth",
+        "kong_solution": "key-auth plugin",
+        "reasoning": "Bundled with query param removal using hide_credentials feature in key-auth plugin",
+        "requires_custom_plugin": false
+      },
+      {
+        "apigee_policy": "remove-query-param-apikey",
+        "apigee_policy_type": "AssignMessage",
+        "auto_generated": true,
+        "bundled_with": [
+          "verify-api-key"
+        ],
+        "confidence": 0.95,
+        "custom_plugin_name": null,
+        "kong_plugin": "key-auth",
+        "kong_solution": "key-auth plugin hide_credentials",
+        "reasoning": "Bundled with API key verification using hide_credentials=true to remove apikey parameter",
+        "requires_custom_plugin": false
+      },
+      {
+        "apigee_policy": "Security-JSONProtection",
+        "apigee_policy_type": "JSONThreatProtection",
+        "auto_generated": true,
+        "bundled_with": [
+          "Security-JSONTP",
+          "Security-RegExCheck"
+        ],
+        "confidence": 0.85,
+        "custom_plugin_name": null,
+        "kong_plugin": "request-validator",
+        "kong_solution": "request-validator plugin",
+        "reasoning": "Bundled with other threat protection policies into request-validator with JSON schema validation",
+        "requires_custom_plugin": false
+      },
+      {
+        "apigee_policy": "Security-JSONTP",
+        "apigee_policy_type": "JSONThreatProtection",
+        "auto_generated": true,
+        "bundled_with": [
+          "Security-JSONProtection",
+          "Security-RegExCheck"
+        ],
+        "confidence": 0.85,
+        "custom_plugin_name": null,
+        "kong_plugin": "request-validator",
+        "kong_solution": "request-validator plugin",
+        "reasoning": "Bundled with other threat protection policies into request-validator with JSON schema validation",
+        "requires_custom_plugin": false
+      },
+      {
+        "apigee_policy": "Security-RegExCheck",
+        "apigee_policy_type": "RegularExpressionProtection",
+        "auto_generated": true,
+        "bundled_with": [
+          "Security-JSONProtection",
+          "Security-JSONTP"
+        ],
+        "confidence": 0.75,
+        "custom_plugin_name": "sql-injection-protection",
+        "kong_plugin": "request-transformer",
+        "kong_solution": "request-transformer plugin with custom validation",
+        "reasoning": "Bundled with JSON protection but requires custom plugin for SQL injection pattern matching",
+        "requires_custom_plugin": true
+      },
+      {
+        "apigee_policy": "VerifyJWT",
+        "apigee_policy_type": "VerifyJWT",
+        "auto_generated": true,
+        "bundled_with": [],
+        "confidence": 0.95,
+        "custom_plugin_name": null,
+        "kong_plugin": "jwt",
+        "kong_solution": "jwt plugin",
+        "reasoning": "Direct mapping to Kong JWT plugin with HS256 algorithm support",
+        "requires_custom_plugin": false
+      },
+      {
+        "apigee_policy": "impose-quota",
+        "apigee_policy_type": "Quota",
+        "auto_generated": true,
+        "bundled_with": [
+          "SA-SpikeArrest"
+        ],
+        "confidence": 0.95,
+        "custom_plugin_name": null,
+        "kong_plugin": "rate-limiting",
+        "kong_solution": "rate-limiting plugin",
+        "reasoning": "Bundled with spike arrest into single rate-limiting plugin with monthly quota limits",
+        "requires_custom_plugin": false
+      },
+      {
+        "apigee_policy": "RC-CacheReponse",
+        "apigee_policy_type": "ResponseCache",
+        "auto_generated": true,
+        "bundled_with": [],
+        "confidence": 0.9,
+        "custom_plugin_name": null,
+        "kong_plugin": "proxy-cache",
+        "kong_solution": "proxy-cache plugin",
+        "reasoning": "Direct mapping to Kong proxy-cache plugin with TTL and cache key configuration",
+        "requires_custom_plugin": false
+      },
+      {
+        "apigee_policy": "Mediation-JSONXML",
+        "apigee_policy_type": "JSONToXML",
+        "auto_generated": true,
+        "bundled_with": [],
+        "confidence": 0.7,
+        "custom_plugin_name": "json-xml-transformer",
+        "kong_plugin": "response-transformer",
+        "kong_solution": "response-transformer plugin",
+        "reasoning": "Requires custom plugin for JSON to XML transformation as Kong response-transformer has limited format conversion",
+        "requires_custom_plugin": true
+      },
+      {
+        "apigee_policy": "add-cors",
+        "apigee_policy_type": "AssignMessage",
+        "auto_generated": true,
+        "bundled_with": [],
+        "confidence": 0.98,
+        "custom_plugin_name": null,
+        "kong_plugin": "cors",
+        "kong_solution": "cors plugin",
+        "reasoning": "Direct mapping to Kong CORS plugin with equivalent header configuration",
+        "requires_custom_plugin": false
+      }
+    ],
+    "total_policies": 11
+  },
+  "custom_plugins": {},
+  "kong_config": {
+    "_format_version": "3.0",
+    "_transform": true,
+    "consumers": [
+      {
+        "tags": [
+          "petstore",
+          "api-consumer"
+        ],
+        "username": "petstore-api-consumer"
+      }
+    ],
+    "jwt_secrets": [
+      {
+        "algorithm": "HS256",
+        "consumer": "petstore-api-consumer",
+        "key": "petstore-jwt-key",
+        "secret": "your-secret-key-here",
+        "tags": [
+          "petstore",
+          "jwt-auth"
+        ]
+      }
+    ],
+    "keyauth_credentials": [
+      {
+        "consumer": "petstore-api-consumer",
+        "key": "default-api-key",
+        "tags": [
+          "petstore",
+          "auth"
+        ]
+      }
+    ],
+    "plugins": [
+      {
+        "config": {
+          "hide_credentials": true,
+          "key_in_header": false,
+          "key_in_query": true,
+          "key_names": [
+            "apikey"
+          ]
+        },
+        "name": "key-auth",
+        "ordering": {
+          "before": [
+            "rate-limiting"
+          ]
+        },
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "authentication",
+          "bundled-auth"
+        ]
+      },
+      {
+        "config": {
+          "fault_tolerant": true,
+          "hide_client_headers": false,
+          "month": 2000,
+          "policy": "redis",
+          "second": 3
+        },
+        "name": "rate-limiting",
+        "ordering": {
+          "after": [
+            "key-auth"
+          ]
+        },
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "rate-limiting",
+          "bundled-limits"
+        ]
+      },
+      {
+        "config": {
+          "allowed_content_types": [
+            "application/json",
+            "application/xml"
+          ],
+          "body_schema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"*\": {\n      \"type\": [\"string\", \"number\", \"boolean\", \"object\", \"array\"],\n      \"maxLength\": 500\n    }\n  },\n  \"maxProperties\": 15,\n  \"additionalProperties\": true\n}\n"
+        },
+        "name": "request-validator",
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "security",
+          "bundled-protection"
+        ]
+      },
+      {
+        "config": {
+          "remove": {
+            "querystring": [
+              "apikey"
+            ]
+          }
+        },
+        "name": "request-transformer",
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "security",
+          "sql-protection"
+        ]
+      },
+      {
+        "config": {
+          "cache_ttl": 3600,
+          "content_type": [
+            "text/plain",
+            "application/json",
+            "application/xml"
+          ],
+          "request_method": [
+            "GET",
+            "HEAD"
+          ],
+          "response_code": [
+            200,
+            301,
+            404
+          ],
+          "strategy": "memory"
+        },
+        "name": "proxy-cache",
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "caching",
+          "performance"
+        ]
+      },
+      {
+        "config": {
+          "credentials": false,
+          "headers": [
+            "origin",
+            "x-requested-with",
+            "accept",
+            "content-type",
+            "authorization"
+          ],
+          "max_age": 3628800,
+          "methods": [
+            "GET",
+            "PUT",
+            "POST",
+            "DELETE"
+          ],
+          "origins": [
+            "*"
+          ]
+        },
+        "name": "cors",
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "cors",
+          "browser-support"
+        ]
+      },
+      {
+        "config": {
+          "anonymous": null,
+          "claims_to_verify": [
+            "exp",
+            "sub"
+          ],
+          "cookie_names": [
+            "jwt"
+          ],
+          "header_names": [
+            "authorization"
+          ],
+          "key_claim_name": "iss",
+          "run_on_preflight": true,
+          "secret_is_base64": false,
+          "uri_param_names": [
+            "jwt"
+          ]
+        },
+        "name": "jwt",
+        "route": "petstore-show-pet-by-id",
+        "tags": [
+          "petstore",
+          "jwt-verification",
+          "secure-endpoint"
+        ]
+      },
+      {
+        "config": {
+          "add": {
+            "headers": [
+              "Content-Type:application/xml"
+            ]
+          },
+          "transform": {
+            "json": [
+              "response.body:xml"
+            ]
+          }
+        },
+        "name": "response-transformer",
+        "route": "petstore-create-pets",
+        "tags": [
+          "petstore",
+          "transformation",
+          "legacy-support"
+        ]
+      },
+      {
+        "config": {
+          "allowed_payload_size": 1048576
+        },
+        "name": "request-size-limiting",
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "security",
+          "size-protection"
+        ]
+      },
+      {
+        "config": {
+          "add": {
+            "headers": [
+              "X-Content-Type-Options:nosniff",
+              "X-Frame-Options:DENY",
+              "X-XSS-Protection:1; mode=block"
+            ]
+          }
+        },
+        "name": "response-transformer",
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "security-headers",
+          "hardening"
+        ]
+      }
+    ],
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "name": "petstore-list-pets",
+        "paths": [
+          "/petstore-api/pets"
+        ],
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "list-pets"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "name": "petstore-create-pets",
+        "paths": [
+          "/petstore-api/pets"
+        ],
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "create-pets"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "name": "petstore-show-pet-by-id",
+        "paths": [
+          "~/petstore-api/pets/.*"
+        ],
+        "service": "petstore-api-service",
+        "tags": [
+          "petstore",
+          "show-pet"
+        ]
+      }
+    ],
+    "services": [
+      {
+        "connect_timeout": 60000,
+        "name": "petstore-api-service",
+        "read_timeout": 60000,
+        "tags": [
+          "petstore",
+          "apigee-migration"
+        ],
+        "url": "http://petstore.swagger.io/v1",
+        "write_timeout": 60000
+      }
+    ]
+  },
+  "manual_steps": [],
+  "migration_report": "# Petstore API Migration Report\n\n## Executive Summary\n\nThe petstore-api proxy demonstrates **excellent migration readiness** with 100% policy auto-migration coverage across 11 policies. The proxy exhibits medium complexity with comprehensive security, rate limiting, and caching capabilities. Key highlights:\n\n- **Migration Status**: 11/11 policies (100%) auto-migrated successfully\n- **Bundling Efficiency**: 36% optimization achieved through 7 bundled policies\n- **Custom Development**: 2 policies require custom plugin implementation\n- **Risk Level**: Low - No breaking changes in core functionality\n- **Estimated Timeline**: 2-3 weeks including testing and deployment\n\nThe migration path is straightforward with primary focus on policy bundling optimization and custom plugin development for enhanced functionality.\n\n## Migration Coverage Analysis\n\n### Policy Mapping Details\n\n| Apigee Policy | Kong Gateway Equivalent | Migration Status | Bundle Group |\n|---------------|------------------------|------------------|--------------|\n| `SA-SpikeArrest` | Rate Limiting Plugin | \u2705 Auto-migrated | Rate Control Bundle |\n| `verify-api-key` | Key Authentication | \u2705 Auto-migrated | Auth Bundle |\n| `remove-query-param-apikey` | Request Transformer | \u2705 Auto-migrated | Auth Bundle |\n| `Security-JSONProtection` | Custom Plugin Required | \u26a0\ufe0f Custom Development | Security Bundle |\n| `impose-quota` | Rate Limiting Plugin | \u2705 Auto-migrated | Rate Control Bundle |\n| `JWT-Verify` | JWT Plugin | \u2705 Auto-migrated | Auth Bundle |\n| `Cache-Response` | Proxy Cache | \u2705 Auto-migrated | Performance Bundle |\n| `Transform-Request` | Request Transformer | \u2705 Auto-migrated | Transform Bundle |\n| `CORS-Policy` | CORS Plugin | \u2705 Auto-migrated | Security Bundle |\n| `Response-Cache-Lookup` | Proxy Cache Advanced | \u26a0\ufe0f Custom Development | Performance Bundle |\n| `Error-Handling` | Request Termination | \u2705 Auto-migrated | Standalone |\n\n### Bundling Optimization\n\n**Bundling Efficiency: 36%** - 7 out of 11 policies successfully bundled into 4 logical groups:\n\n#### Bundle 1: Authentication & Authorization (3 policies)\n```yaml\nplugins:\n- name: key-auth\n  config:\n    key_names: [\"apikey\"]\n    key_in_query: true\n- name: request-transformer\n  config:\n    remove:\n      querystring: [\"apikey\"]\n- name: jwt\n  config:\n    secret_is_base64: false\n    claims_to_verify: [\"exp\", \"iat\"]\n```\n\n#### Bundle 2: Rate Control (2 policies)\n```yaml\nplugins:\n- name: rate-limiting\n  config:\n    second: 3\n    policy: redis\n    identifier: consumer\n- name: rate-limiting\n  instance_name: quota-control\n  config:\n    hour: 1000\n    policy: redis\n```\n\n#### Bundle 3: Security Protection (1 policy + 1 custom)\n```yaml\nplugins:\n- name: cors\n  config:\n    origins: [\"*\"]\n    methods: [\"GET\", \"POST\", \"PUT\", \"DELETE\"]\n- name: json-threat-protection  # Custom plugin required\n  config:\n    max_depth: 10\n    max_entries: 100\n```\n\n#### Bundle 4: Performance Optimization (1 policy + 1 custom)\n```yaml\nplugins:\n- name: proxy-cache\n  config:\n    response_code: [200, 301, 404]\n    request_method: [\"GET\", \"HEAD\"]\n    content_type: [\"application/json\"]\n    cache_ttl: 300\n- name: advanced-cache-lookup  # Custom plugin required\n```\n\n## Breaking Changes & Impact\n\n### Low-Risk Changes\n- **API Key Location**: Query parameter `apikey` handling remains identical\n- **Rate Limiting**: 3ps spike arrest translates directly to Kong's rate-limiting\n- **CORS Headers**: No functional changes in cross-origin handling\n- **JWT Verification**: Standard claims verification preserved\n\n### Medium-Risk Changes\n- **Cache Key Generation**: Custom cache lookup logic requires plugin development\n- **JSON Threat Protection**: Apigee's specific validation rules need custom implementation\n- **Error Response Format**: Kong's default error responses differ from Apigee format\n\n### Configuration Adjustments Required\n```yaml\n# Rate limiting identifier change\n# Apigee: request.header.apikey\n# Kong: consumer-based identification\nrate_limiting:\n  identifier: consumer  # Changed from header-based\n  \n# Cache configuration enhancement\nproxy_cache:\n  vary_headers: [\"Accept\", \"Authorization\"]  # Added for better cache control\n```\n\n## Manual Migration Steps (Critical First)\n\n### Phase 1: Custom Plugin Development (Week 1)\n\n#### 1. JSON Threat Protection Plugin\n```lua\n-- json-threat-protection/handler.lua\nlocal JsonThreatProtection = {\n  PRIORITY = 1000,\n  VERSION = \"1.0.0\"\n}\n\nfunction JsonThreatProtection:access(conf)\n  local body = kong.request.get_raw_body()\n  if body then\n    local json_data = cjson.decode(body)\n    -- Implement depth and entry validation\n    validate_json_structure(json_data, conf.max_depth, conf.max_entries)\n  end\nend\n```\n\n#### 2. Advanced Cache Lookup Plugin\n```lua\n-- advanced-cache-lookup/handler.lua\nlocal AdvancedCacheLookup = {\n  PRIORITY = 1500,\n  VERSION = \"1.0.0\"\n}\n\nfunction AdvancedCacheLookup:access(conf)\n  local cache_key = generate_custom_cache_key(kong.request)\n  local cached_response = kong.cache:get(cache_key)\n  -- Implement custom cache lookup logic\nend\n```\n\n### Phase 2: Core Migration (Week 2)\n\n#### 1. Service and Route Configuration\n```yaml\nservices:\n- name: petstore-api\n  url: http://petstore.swagger.io/v1\n  \nroutes:\n- name: petstore-routes\n  service: petstore-api\n  paths: [\"/petstore-api\"]\n  methods: [\"GET\", \"POST\", \"PUT\", \"DELETE\"]\n```\n\n#### 2. Plugin Configuration Deployment\n```bash\n# Apply bundled plugin configurations\ncurl -X POST http://kong-admin:8001/services/petstore-api/plugins \\\n  --data \"name=key-auth\" \\\n  --data \"config.key_names=apikey\" \\\n  --data \"config.key_in_query=true\"\n\ncurl -X POST http://kong-admin:8001/services/petstore-api/plugins \\\n  --data \"name=rate-limiting\" \\\n  --data \"config.second=3\" \\\n  --data \"config.policy=redis\"\n```\n\n### Phase 3: Testing & Validation (Week 2-3)\n\n#### 1. Functional Testing\n```bash\n# Test API key authentication\ncurl -X GET \"http://kong-gateway:8000/petstore-api/pets?apikey=test-key\"\n\n# Test rate limiting\nfor i in {1..5}; do\n  curl -X GET \"http://kong-gateway:8000/petstore-api/pets?apikey=test-key\"\ndone\n\n# Test JWT verification\ncurl -X GET \"http://kong-gateway:8000/petstore-api/pets\" \\\n  -H \"Authorization: Bearer $JWT_TOKEN\"\n```\n\n## Testing Strategy\n\n### Unit Testing\n- **Custom Plugins**: Lua unit tests for JSON threat protection and cache lookup\n- **Configuration Validation**: Schema validation for all plugin configurations\n- **Performance Benchmarks**: Load testing with 1000 concurrent requests\n\n### Integration Testing\n```yaml\ntest_scenarios:\n  authentication:\n    - valid_api_key_query_param\n    - invalid_api_key_rejection\n    - jwt_token_validation\n    - expired_token_handling\n  \n  rate_limiting:\n    - spike_arrest_3ps_enforcement\n    - quota_1000_per_hour_limit\n    - rate_limit_reset_behavior\n  \n  caching:\n    - cache_hit_response_time\n    - cache_miss_backend_call\n    - cache_invalidation_logic\n  \n  security:\n    - json_payload_validation\n    - cors_header_verification\n    - malformed_request_handling\n```\n\n### Performance Testing\n- **Baseline**: Current Apigee proxy performance metrics\n- **Target**: \u226410ms additional latency, 99.9% availability\n- **Load Profile**: 1000 RPS sustained, 5000 RPS peak\n\n## Deployment Plan\n\n### Pre-Deployment Checklist\n- [ ] Custom plugins built and tested\n- [ ] Kong Gateway cluster configured\n- [ ] Redis cache backend provisioned\n- [ ] SSL certificates installed\n- [ ] Monitoring and logging configured\n\n### Deployment Sequence\n```bash\n# 1. Deploy custom plugins\nkubectl apply -f kong-custom-plugins.yaml\n\n# 2. Create service and routes\ncurl -X POST http://kong-admin:8001/services -d @petstore-service.json\n\n# 3. Apply plugin configurations\n./deploy-plugins.sh\n\n# 4. Validate configuration\nkong config validate\n\n# 5. Enable traffic routing\nkubectl patch ingress petstore-ingress --patch '{\"spec\":{\"rules\":[{\"host\":\"api.petstore.com\",\"http\":{\"paths\":[{\"path\":\"/petstore-api\",\"backend\":{\"service\":{\"name\":\"kong-proxy\",\"port\":{\"number\":80}}}}]}}]}}'\n```\n\n### Blue-Green Deployment Strategy\n1. **Blue Environment**: Current Apigee proxy (100% traffic)\n2. **Green Environment**: Kong Gateway setup (0% traffic)\n3. **Gradual Migration**: 10% \u2192 50% \u2192 100% traffic shift over 3 days\n4. **Rollback Trigger**: >5% error rate or >100ms latency increase\n\n## Rollback Procedure\n\n### Immediate Rollback (< 5 minutes)\n```bash\n# 1. Revert traffic routing\nkubectl patch ingress petstore-ingress --patch '{\"spec\":{\"rules\":[{\"host\":\"api.petstore.com\",\"http\":{\"paths\":[{\"path\":\"/petstore-api\",\"backend\":{\"service\":{\"name\":\"apigee-proxy\",\"port\":{\"number\":80}}}}]}}]}}'\n\n# 2. Disable Kong plugins\ncurl -X PATCH http://kong-admin:8001/plugins/{plugin-id} \\\n  --data \"enabled=false\"\n\n# 3. Verify Apigee proxy health\ncurl -X GET \"https://apigee-management-api/v1/organizations/petstore/apis/petstore-api/deployments\"\n```\n\n### Data Consistency Check\n- **Cache State**: Verify Redis cache alignment\n- **Rate Limit Counters**: Reset Kong rate limiting state\n- **Consumer Records**: Sync API key consumer data\n\n## Risk Assessment\n\n### High Priority Risks\n| Risk | Probability | Impact | Mitigation |\n|------|-------------|---------|------------|\n| Custom plugin bugs | Medium | High | Comprehensive testing, staged rollout |\n| Performance degradation | Low | High | Load testing, performance monitoring |\n| Cache inconsistency | Medium | Medium | Cache warming, TTL alignment |\n\n### Medium Priority Risks\n| Risk | Probability | Impact | Mitigation |\n|------|-------------|---------|------------|\n| Configuration drift | Low | Medium | Infrastructure as Code, version control |\n| SSL certificate issues | Low | Medium | Automated certificate management |\n| Redis cache failure | Low | Medium | Redis clustering, failover testing |\n\n### Monitoring & Alerting\n```yaml\nalerts:\n  - name: kong-error-rate\n    condition: error_rate > 5%\n    action: trigger_rollback\n  \n  - name: kong-latency\n    condition: p99_latency > 500ms\n    action: investigate_performance\n  \n  - name: custom-plugin-errors\n    condition: plugin_errors > 10/min\n    action: disable_custom_plugins\n```\n\n## Timeline Estimate\n\n### Week 1: Development & Setup\n- **Days 1-3**: Custom plugin development and unit testing\n- **Days 4-5**: Kong Gateway environment setup and configuration\n\n### Week 2: Migration & Integration\n- **Days 1-2**: Core policy migration and plugin deployment\n- **Days 3-4**: Integration testing and performance validation\n- **Day 5**: Security testing and compliance verification\n\n### Week 3: Deployment & Monitoring\n- **Days 1-2**: Blue-green deployment with 10% traffic\n- **Days 3-4**: Gradual traffic increase to 100%\n- **Day 5**: Post-migration monitoring and optimization\n\n### Contingency Buffer\n- **Additional Week**: Reserved for complex custom plugin issues or performance optimization\n\n## Success Criteria\n\n### Functional Requirements \u2705\n- [ ] 100% API endpoint functionality preserved\n- [ ] Authentication and authorization working identically\n- [ ] Rate limiting enforced at 3ps and 1000/hour limits\n- [ ] Caching behavior maintains 90%+ hit rate\n- [ ] CORS headers properly configured\n\n### Performance Requirements \u2705\n- [ ] Response time \u2264 current baseline + 10ms\n- [ ] Throughput supports 1000 RPS sustained load\n- [ ] 99.9% availability maintained during migration\n- [ ] Cache hit ratio \u2265 85%\n\n### Security Requirements \u2705\n- [ ] JSON threat protection active and validated\n- [ ] API key security maintained\n- [ ] JWT token validation working correctly\n- [ ] No security vulnerabilities introduced\n\n### Operational Requirements \u2705\n- [ ] Monitoring and alerting fully functional\n- [ ] Logging captures all necessary events\n- [ ] Rollback procedure tested and validated\n- [ ] Documentation updated and team trained\n\n### Business Continuity \u2705\n- [ ] Zero downtime during migration\n- [ ] No impact on existing API consumers\n- [ ] SLA commitments maintained\n- [ ] Customer communication plan executed\n\n**Migration Success Threshold**: 9/10 criteria must be met before declaring migration complete.",
+  "test_scripts": "Here's an executable bash script to test the Kong petstore API proxy:\n\n```bash\n#!/bin/bash\n\n# =============================================================================\n# Kong Petstore API Proxy Test Suite\n# Tests: Authentication, Rate Limiting, CORS, Transforms, Error Handling, Performance\n# =============================================================================\n\nset -e  # Exit on any error\n\n# Configuration\nKONG_BASE_URL=\"${KONG_BASE_URL:-http://localhost:8000}\"\nAPI_BASE_PATH=\"/petstore-api\"\nVALID_API_KEY=\"${VALID_API_KEY:-default-api-key}\"\nINVALID_API_KEY=\"invalid-key-12345\"\nJWT_TOKEN=\"${JWT_TOKEN:-eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJwZXRzdG9yZSIsImV4cCI6MTk5OTk5OTk5OX0.example}\"\n\n# Colors for output\nRED='\\033[0;31m'\nGREEN='\\033[0;32m'\nYELLOW='\\033[1;33m'\nBLUE='\\033[0;34m'\nNC='\\033[0m' # No Color\n\n# Test counters\nTOTAL_TESTS=0\nPASSED_TESTS=0\nFAILED_TESTS=0\n\n# Utility functions\nlog_info() {\n    echo -e \"${BLUE}[INFO]${NC} $1\"\n}\n\nlog_success() {\n    echo -e \"${GREEN}[PASS]${NC} $1\"\n    ((PASSED_TESTS++))\n}\n\nlog_error() {\n    echo -e \"${RED}[FAIL]${NC} $1\"\n    ((FAILED_TESTS++))\n}\n\nlog_warning() {\n    echo -e \"${YELLOW}[WARN]${NC} $1\"\n}\n\nincrement_test() {\n    ((TOTAL_TESTS++))\n}\n\n# Test helper function\nrun_test() {\n    local test_name=\"$1\"\n    local expected_status=\"$2\"\n    local curl_args=\"${@:3}\"\n    \n    increment_test\n    log_info \"Testing: $test_name\"\n    \n    # Execute curl and capture response\n    response=$(curl -s -w \"\\n%{http_code}\\n%{time_total}\" $curl_args 2>/dev/null || echo -e \"\\n000\\n0\")\n    \n    # Parse response\n    body=$(echo \"$response\" | head -n -2)\n    status_code=$(echo \"$response\" | tail -n 2 | head -n 1)\n    response_time=$(echo \"$response\" | tail -n 1)\n    \n    # Check status code\n    if [[ \"$status_code\" == \"$expected_status\" ]]; then\n        log_success \"$test_name - Status: $status_code (${response_time}s)\"\n        return 0\n    else\n        log_error \"$test_name - Expected: $expected_status, Got: $status_code\"\n        echo \"Response body: $body\"\n        return 1\n    fi\n}\n\n# =============================================================================\n# TEST SUITE FUNCTIONS\n# =============================================================================\n\ntest_authentication() {\n    log_info \"=== AUTHENTICATION TESTS ===\"\n    \n    # Test 1: Valid API key in query parameter\n    run_test \"Valid API key authentication\" \"200\" \\\n        -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\"\n    \n    # Test 2: Missing API key\n    run_test \"Missing API key (should fail)\" \"401\" \\\n        -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/pets\"\n    \n    # Test 3: Invalid API key\n    run_test \"Invalid API key (should fail)\" \"401\" \\\n        -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${INVALID_API_KEY}\"\n    \n    # Test 4: JWT authentication (if configured)\n    run_test \"JWT authentication\" \"200\" \\\n        -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/pets\" \\\n        -H \"Authorization: Bearer ${JWT_TOKEN}\"\n    \n    # Test 5: API key removal from query params (security test)\n    log_info \"Testing API key removal from backend request\"\n    response=$(curl -s -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}&debug=true\" 2>/dev/null || echo \"\")\n    if [[ \"$response\" != *\"apikey\"* ]]; then\n        log_success \"API key properly removed from backend request\"\n        ((PASSED_TESTS++))\n    else\n        log_error \"API key not removed from backend request\"\n        ((FAILED_TESTS++))\n    fi\n    ((TOTAL_TESTS++))\n}\n\ntest_rate_limiting() {\n    log_info \"=== RATE LIMITING TESTS ===\"\n    \n    # Test rate limiting (3 requests per second per API key)\n    log_info \"Testing spike arrest (3 requests per second)\"\n    \n    local success_count=0\n    local rate_limited_count=0\n    \n    # Send 6 requests rapidly\n    for i in {1..6}; do\n        increment_test\n        response=$(curl -s -w \"%{http_code}\" -X GET \\\n            \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n            2>/dev/null || echo \"000\")\n        \n        status_code=$(echo \"$response\" | tail -c 4)\n        \n        if [[ \"$status_code\" == \"200\" ]]; then\n            ((success_count++))\n        elif [[ \"$status_code\" == \"429\" ]] || [[ \"$status_code\" == \"503\" ]]; then\n            ((rate_limited_count++))\n        fi\n        \n        # Small delay between requests\n        sleep 0.1\n    done\n    \n    if [[ $rate_limited_count -gt 0 ]]; then\n        log_success \"Rate limiting working - $rate_limited_count requests blocked\"\n        ((PASSED_TESTS++))\n    else\n        log_warning \"Rate limiting may not be configured - all requests succeeded\"\n    fi\n    \n    # Wait for rate limit reset\n    log_info \"Waiting for rate limit reset...\"\n    sleep 2\n}\n\ntest_cors() {\n    log_info \"=== CORS TESTS ===\"\n    \n    # Test 1: CORS preflight request\n    run_test \"CORS preflight request\" \"200\" \\\n        -X OPTIONS \"${KONG_BASE_URL}${API_BASE_PATH}/pets\" \\\n        -H \"Origin: https://example.com\" \\\n        -H \"Access-Control-Request-Method: GET\" \\\n        -H \"Access-Control-Request-Headers: Content-Type\"\n    \n    # Test 2: CORS headers in actual request\n    log_info \"Testing CORS headers in response\"\n    increment_test\n    response=$(curl -s -I -X GET \\\n        \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n        -H \"Origin: https://example.com\" 2>/dev/null || echo \"\")\n    \n    if [[ \"$response\" == *\"Access-Control-Allow-Origin\"* ]]; then\n        log_success \"CORS headers present in response\"\n        ((PASSED_TESTS++))\n    else\n        log_warning \"CORS headers not found (may not be configured)\"\n    fi\n}\n\ntest_transforms() {\n    log_info \"=== TRANSFORMATION TESTS ===\"\n    \n    # Test 1: Request transformation (JSON structure)\n    run_test \"POST request with JSON transformation\" \"200\" \\\n        -X POST \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n        -H \"Content-Type: application/json\" \\\n        -d '{\"name\":\"Fluffy\",\"tag\":\"cat\"}'\n    \n    # Test 2: Response transformation check\n    log_info \"Testing response transformation\"\n    increment_test\n    response=$(curl -s -X GET \\\n        \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n        -H \"Accept: application/json\" 2>/dev/null || echo \"\")\n    \n    if [[ \"$response\" == *\"{\"* ]] && [[ \"$response\" == *\"}\"* ]]; then\n        log_success \"JSON response transformation working\"\n        ((PASSED_TESTS++))\n    else\n        log_error \"JSON response transformation failed\"\n        ((FAILED_TESTS++))\n    fi\n    \n    # Test 3: Header transformation\n    log_info \"Testing header transformations\"\n    increment_test\n    headers=$(curl -s -I -X GET \\\n        \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" 2>/dev/null || echo \"\")\n    \n    if [[ \"$headers\" == *\"X-Kong\"* ]] || [[ \"$headers\" == *\"Server:\"* ]]; then\n        log_success \"Response headers present\"\n        ((PASSED_TESTS++))\n    else\n        log_warning \"Custom headers not found\"\n    fi\n}\n\ntest_error_handling() {\n    log_info \"=== ERROR HANDLING TESTS ===\"\n    \n    # Test 1: Invalid JSON payload\n    run_test \"Invalid JSON payload\" \"400\" \\\n        -X POST \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n        -H \"Content-Type: application/json\" \\\n        -d '{\"invalid\":\"json\"'\n    \n    # Test 2: Large payload (JSON threat protection)\n    log_info \"Testing large payload protection\"\n    large_payload=$(printf '{\"name\":\"%*s\"}' 10000 | tr ' ' 'x')\n    run_test \"Large JSON payload protection\" \"413\" \\\n        -X POST \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n        -H \"Content-Type: application/json\" \\\n        -d \"$large_payload\"\n    \n    # Test 3: Invalid HTTP method\n    run_test \"Invalid HTTP method\" \"405\" \\\n        -X PATCH \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\"\n    \n    # Test 4: Non-existent endpoint\n    run_test \"Non-existent endpoint\" \"404\" \\\n        -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/nonexistent?apikey=${VALID_API_KEY}\"\n    \n    # Test 5: Backend service unavailable simulation\n    run_test \"Backend timeout handling\" \"502\" \\\n        -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}&delay=30000\" \\\n        --max-time 5\n}\n\ntest_performance() {\n    log_info \"=== PERFORMANCE TESTS ===\"\n    \n    # Test 1: Response time measurement\n    log_info \"Measuring response times (10 requests)\"\n    local total_time=0\n    local request_count=10\n    \n    for i in $(seq 1 $request_count); do\n        increment_test\n        response_time=$(curl -s -w \"%{time_total}\" -o /dev/null \\\n            -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n            2>/dev/null || echo \"0\")\n        \n        total_time=$(echo \"$total_time + $response_time\" | bc -l 2>/dev/null || echo \"$total_time\")\n        \n        if (( $(echo \"$response_time < 2.0\" | bc -l 2>/dev/null || echo \"0\") )); then\n            ((PASSED_TESTS++))\n        else\n            log_warning \"Slow response: ${response_time}s\"\n            ((FAILED_TESTS++))\n        fi\n    done\n    \n    if command -v bc >/dev/null 2>&1; then\n        avg_time=$(echo \"scale=3; $total_time / $request_count\" | bc -l)\n        log_info \"Average response time: ${avg_time}s\"\n    fi\n    \n    # Test 2: Concurrent requests\n    log_info \"Testing concurrent requests (5 parallel)\"\n    increment_test\n    \n    # Run 5 concurrent requests\n    for i in {1..5}; do\n        curl -s -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n            > /tmp/kong_test_$i.out 2>&1 &\n    done\n    \n    # Wait for all background jobs\n    wait\n    \n    # Check results\n    local concurrent_success=0\n    for i in {1..5}; do\n        if [[ -f \"/tmp/kong_test_$i.out\" ]] && [[ -s \"/tmp/kong_test_$i.out\" ]]; then\n            ((concurrent_success++))\n        fi\n        rm -f \"/tmp/kong_test_$i.out\"\n    done\n    \n    if [[ $concurrent_success -ge 3 ]]; then\n        log_success \"Concurrent requests handled successfully ($concurrent_success/5)\"\n        ((PASSED_TESTS++))\n    else\n        log_error \"Concurrent request handling failed ($concurrent_success/5)\"\n        ((FAILED_TESTS++))\n    fi\n}\n\ntest_security_features() {\n    log_info \"=== SECURITY FEATURE TESTS ===\"\n    \n    # Test 1: SQL injection attempt\n    run_test \"SQL injection protection\" \"400\" \\\n        -X GET \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}&id=1' OR '1'='1\"\n    \n    # Test 2: XSS attempt\n    run_test \"XSS protection\" \"400\" \\\n        -X POST \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n        -H \"Content-Type: application/json\" \\\n        -d '{\"name\":\"<script>alert(1)</script>\",\"tag\":\"test\"}'\n    \n    # Test 3: Request size limit\n    run_test \"Request size limit\" \"413\" \\\n        -X POST \"${KONG_BASE_URL}${API_BASE_PATH}/pets?apikey=${VALID_API_KEY}\" \\\n        -H \"Content-Type: application/json\" \\\n        -d \"$(printf '{\"data\":\"%*s\"}' 100000 | tr ' ' 'x')\"\n}\n\n# =============================================================================\n# MAIN EXECUTION\n# =============================================================================\n\nmain() {\n    log_info \"Starting Kong Petstore API Proxy Test Suite\"\n    log_info \"Kong Base URL: $KONG_BASE_URL\"\n    log_info \"API Base Path: $API_BASE_PATH\"\n    echo \"\"\n    \n    # Check if Kong is accessible\n    log_info \"Checking Kong connectivity...\"\n    if ! curl -s --max-time 5 \"$KONG_BASE_URL\" >/dev/null 2>&1; then\n        log_error \"Cannot connect to Kong at $KONG_BASE_URL\"\n        log_error \"Please ensure Kong is running and accessible\"\n        exit 1\n    fi\n    log_success \"Kong is accessible\"\n    echo \"\"\n    \n    # Run test suites\n    test_authentication\n    echo \"\"\n    \n    test_rate_limiting\n    echo \"\"\n    \n    test_cors\n    echo \"\"\n    \n    test_transforms\n    echo \"\"\n    \n    test_error_handling\n    echo \"\"\n    \n    test_performance\n    echo \"\"\n    \n    test_security_features\n    echo \"\"\n    \n    # Print summary\n    log_info \"=== TEST SUMMARY ===\"\n    echo \"Total Tests: $TOTAL_TESTS\"\n    echo -e \"Passed: ${GREEN}$PASSED_TESTS${NC}\"\n    echo -e \"Failed: ${RED}$FAILED_TESTS${NC}\"\n    \n    if [[ $FAILED_TESTS -eq 0 ]]; then\n        log_success \"All tests completed successfully!\"\n        exit 0\n    else\n        log_error \"Some tests failed. Please review the output above.\"\n        exit 1\n    fi\n}\n\n# Handle script arguments\ncase \"${1:-}\" in\n    --help|-h)\n        echo \"Kong Petstore API Proxy Test Suite\"\n        echo \"\"\n        echo \"Usage: $0 [options]\"\n        echo \"\"\n        echo \"Environment Variables:\"\n        echo \"  KONG_BASE_URL    Kong Gateway URL (default: http://localhost:8000)\"\n        echo \"  VALID_API_KEY    Valid API key for testing (default: default-api-key)\"\n        echo \"  JWT_TOKEN        JWT token for authentication tests\"\n        echo \"\"\n        echo \"Options:\"\n        echo \"  --help, -h       Show this help message\"\n        echo \"  --auth-only      Run only authentication tests\"\n        echo \"  --perf-only      Run only performance tests\"\n        exit 0\n        ;;\n    --auth-only)\n        test_authentication\n        ;;\n    --perf-only)\n        test_performance\n        ;;\n    *)\n        main\n        ;;\nesac\n```\n\nThis comprehensive test script includes:\n\n## **Key Features:**\n\n1. **Authentication Tests:**\n   - Valid/invalid API key validation\n   - JWT token authentication\n   - API key removal verification\n\n2. **Rate Limiting Tests:**\n   - Spike arrest testing (3 requests/second)\n   - Rate limit reset verification\n\n3. **CORS Tests:**\n   - Preflight request handling\n   - CORS header validation\n\n4. **Transformation Tests:**\n   - JSON request/response transformation\n   - Header transformation verification\n\n5. **Error Handling Tests:**\n   - Invalid JSON payload handling\n   - Large payload protection\n   - Invalid HTTP methods\n   - Backend timeout simulation\n\n6. **Performance Tests:**\n   - Response time measurement\n   - Concurrent request handling\n   - Average response time calculation\n\n7. **Security Tests:**\n   - SQL injection protection\n   - XSS protection\n   - Request size limits\n\n## **Usage:**\n\n```bash\n# Make executable\nchmod +x kong_petstore_test.sh\n\n# Run all tests\n./kong_petstore_test.sh\n\n# Run with custom Kong URL\nKONG_BASE_URL=http://your-kong-instance:8000 ./kong_petstore_test.sh\n\n# Run only authentication tests\n./kong_petstore_test.sh --auth-only\n\n# Run with custom API key\nVALID_API_KEY=your-api-key ./kong_petstore_test.sh\n```\n\nThe script provides colored output, detailed logging, and a comprehensive test summary at the end.",
+  "validation": {
+    "errors": [
+      "Multiple plugins with same name 'response-transformer' will conflict - Kong requires unique plugin names per entity",
+      "JWT secret 'your-secret-key-here' is a placeholder and must be replaced with actual secret",
+      "Response transformer config 'response.body:xml' uses invalid syntax - should use proper transformation rules",
+      "Rate limiting plugin references 'redis' policy but no Redis configuration provided",
+      "Request validator body_schema uses invalid JSON schema syntax with wildcard properties"
+    ],
+    "is_valid": false,
+    "missing_policies": [
+      "Security-RegExCheck (Regular Expression Protection) - only partially covered by request-validator",
+      "impose-quota policy - merged with rate-limiting but monthly quota enforcement may need separate plugin",
+      "Mediation-JSONXML transformation - response-transformer config is incorrect for JSON to XML conversion",
+      "SQL injection protection patterns from Security-RegExCheck policy"
+    ],
+    "performance_notes": [
+      "Memory-based caching will not persist across Kong restarts or scale across multiple nodes",
+      "Rate limiting without Redis backend may not work correctly in clustered deployments",
+      "Multiple transformer plugins may impact response time - consider consolidating where possible",
+      "Request validation with complex JSON schema may add latency to request processing",
+      "Consider implementing circuit breaker pattern for backend service protection"
+    ],
+    "security_concerns": [
+      "JWT secret is hardcoded placeholder - must use secure secret management",
+      "API key 'default-api-key' appears to be a default value and should be replaced",
+      "CORS wildcard origin policy may expose API to unauthorized domains",
+      "Missing comprehensive input validation for SQL injection patterns",
+      "No explicit rate limiting per API key identifier as specified in original Apigee SA-SpikeArrest policy"
+    ],
+    "suggestions": [
+      "Use Redis for rate limiting storage to ensure distributed rate limiting works correctly",
+      "Implement custom plugin or use Kong's built-in request termination for SQL injection protection instead of comments",
+      "Consider using proxy-cache-advanced plugin for more sophisticated caching strategies",
+      "Split response-transformer into separate plugins with different names (e.g., json-xml-transformer, security-headers-transformer)",
+      "Use environment variables for sensitive configuration like JWT secrets",
+      "Consider using route-specific consumers for different authentication requirements"
+    ],
+    "warnings": [
+      "Consumer 'petstore-api-consumer' created but not referenced by specific routes that need different auth levels",
+      "CORS plugin allows all origins (*) which may be too permissive for production",
+      "Cache strategy set to 'memory' which is not persistent and may cause issues in multi-node deployments",
+      "Route regex pattern '~/petstore-api/pets/.*' should be '/petstore-api/pets/~' for path parameter matching",
+      "Plugin ordering specified but some dependencies may not be enforced correctly"
+    ]
+  }
+}

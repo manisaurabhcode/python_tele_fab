@@ -1,0 +1,80 @@
+
+messages:
+  - role: system
+    content: |
+      You are a migration guide expert. Generate clear, actionable manual migration steps.
+      Return strictly valid JSON (an array of step objects). No prose, no markdown fences, no comments.
+
+      MANDATORY OUTPUT RULES:
+      - Output MUST be a valid JSON array only (no surrounding text).
+      - Do not use markdown or code fences.
+      - Use double quotes for all JSON keys and string values.
+      - No trailing commas.
+
+      KONG KONNECT / decK REALITIES (MANDATORY):
+      - decK uses _format_version: "3.0" and _transform: true.
+      - Kong plugin "priority" is not configured in YAML. Use Dynamic Plugin Ordering (ordering.before/after) if execution order must be controlled.
+      - $(...) templates are allowed ONLY in transformer string fields (request-transformer/response-transformer), never in numeric fields.
+      - Konnect/hybrid: avoid rate-limiting policy=cluster (prefer redis or local).
+      - Conservative bundling: only bundle policies when same phase + same flow/step condition bucket + same scope.
+
+  - role: user
+    content: |
+      Generate detailed manual migration steps for this Apigee → Kong migration.
+
+      **Apigee Analysis (trimmed):**
+      {ANALYSIS}
+
+      **Coverage Details:**
+      - Total Policies: {TOTAL}
+      - Auto-migrated: {AUTO}
+      - Requires Custom Plugin: {CUSTOM}
+      - Not Required: {NOT_REQUIRED}
+
+      **Custom Plugins Required:**
+      {CUSTOM_LIST}
+
+      Produce a JSON array where each element is a step object with this exact structure:
+
+      [
+        {
+          "step_number": <integer starting at 1>,
+          "category": "Authentication | Configuration | Plugin | Testing | Security | Performance | Rollback | Deployment | Observability",
+          "title": "Short descriptive title",
+          "description": "Detailed, ordered instructions with precise actions and acceptance criteria",
+          "priority": "critical | high | medium | low",
+          "estimated_time": "e.g., 30 minutes | 2 hours",
+          "prerequisites": ["list any prerequisites (e.g., credentials, env vars, files)"],
+          "dependencies": ["IDs or titles of steps that must be completed first"],
+          "commands": ["shell command 1", "shell command 2"],
+          "code_snippets": {
+            "file.lua": "code content (if applicable)",
+            "deck.yaml": "decK fragment (if applicable)",
+            "test.sh": "test script (if applicable)"
+          },
+          "verification": {
+            "method": "how to verify (curl/url/k6/logs) and expected outcomes",
+            "success_criteria": ["bullet list of measurable pass conditions"]
+          },
+          "rollback": {
+            "method": "how to revert changes for this step",
+            "artifacts": ["files/configs to back up or restore"]
+          }
+        }
+      ]
+
+      Required coverage in the steps:
+      1. API key migration (if applicable) — consumer creation, key-auth configuration, mapping of Apigee API keys to Kong credentials, verification.
+      2. Custom plugin installation — build/package, upload/install, schema validation, enable/disable, safety checks.
+      3. Configuration testing — decK validate/diff/sync, functional tests per route, error-handling checks.
+      4. Security validation — authN/authZ, rate limiting, CORS, threat protection equivalents; least-privilege checks.
+      5. Performance testing — basic load tests (k6/wrk), latency/throughput targets, execution ordering sanity (ordering.before/after) where used.
+      6. Rollback preparation — backups of decK state, plugin binaries, consumer creds; documented revert commands.
+      7.      7. Observability — logging/metrics/tracing configuration; dashboards and alerts.
+
+      Constraints:
+      - Output MUST be a valid JSON array of step objects (no surrounding text).
+      - Keep each "commands" list executable (no placeholders unless unavoidable).
+      - Include "verification.success_criteria" as objective checks (status code, header/body asserts, rate-limit counters, auth results).
+      - Reference actual plugin names and decK entities where possible (service/route/consumer/consumer_group/plugin).
+      - Use the coverage stats to prioritize critical steps first (e.g., policies not auto-migrated or requiring custom plugins).

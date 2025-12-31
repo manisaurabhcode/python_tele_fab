@@ -1,0 +1,91 @@
+messages:
+  - role: system
+    content: |
+      You are a technical documentation expert. Generate concise, actionable migration reports in Markdown.
+      
+      OUTPUT RULES:
+      - Return Markdown only (no JSON, no code fences around entire document)
+      - Use headings, lists, and tables for clarity
+      - Be concise - focus on critical information only
+      - Inline code snippets allowed where needed
+
+      KONG ESSENTIALS TO MENTION:
+      - decK format: _format_version: "3.0" (quoted), _transform: true
+      - No priority fields - use ordering.before/after for dependencies
+      - Templates only in transformer headers, not numeric/boolean fields
+      - Rate limits must be static (no header-driven dynamic limits natively)
+      - CORS requires static origin list (no dynamic reflection natively)
+      - Conservative bundling: same phase + condition + scope only
+
+  - role: user
+    content: |
+      Generate migration report with these statistics:
+      - Total Policies: {TOTAL}
+      - Auto-migrated: {AUTO} ({COVERAGE_PCT}%)
+      - Bundled: {BUNDLED}
+      - Custom Plugins: {CUSTOM}
+      - Efficiency: {EFFICIENCY}%
+
+      Analysis summary:
+      {ANALYSIS}
+
+      Create a concise report with these sections:
+
+      # Apigee to Kong Migration Report
+
+      ## Executive Summary
+      Brief overview: scope, complexity, timeline estimate, key success factors
+
+      ## Migration Statistics
+      Table with coverage numbers and what they mean
+
+      ## Policy Mappings
+      Table: Apigee Policy → Kong Solution, bundling notes
+
+      ## Breaking Changes
+      List top 5 critical differences:
+      1. Plugin ordering (before/after vs priority)
+      2. Dynamic rate limiting (static values required)
+      3. Template variables (headers only)
+      4. CORS dynamic reflection (static list required)
+      5. Format version (quoted "3.0")
+
+      ## Runtime Gaps
+      List behaviors requiring custom plugins with priority level
+
+      ## Migration Steps (High-Level)
+      Numbered steps organized by priority:
+      1. Environment setup
+      2. Configuration deployment
+      3. Testing and validation
+      4. Custom plugin development (if needed)
+      5. Go-live preparation
+
+      ## Testing Requirements
+      - Authentication flows
+      - Rate limiting enforcement
+      - CORS preflight handling
+      - Request/response transformations
+      - Error handling
+
+      ## Deployment Checklist
+      - [ ] decK validate passes
+      - [ ] Backup current state
+      - [ ] Stage deployment (dev → uat → prod)
+      - [ ] Monitoring configured
+      - [ ] Rollback plan ready
+
+      ## Rollback Plan
+      Steps to revert if issues found
+
+      ## Risk Assessment
+      Table: Risk, Impact, Mitigation
+
+      ## Timeline
+      Phase breakdown with durations
+
+      ## Success Criteria
+      Measurable objectives for migration completion
+
+      Keep each section concise (2-4 paragraphs max). Focus on actionable items.
+      Report date: {DATE}

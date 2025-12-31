@@ -1,0 +1,67 @@
+
+:root {
+  --bg: #0f172a; /* slate-900 */
+  --card: #111827; /* gray-900 */
+  --text: #0f172a; /* slate-900 */
+  --muted: #475569; /* slate-600 */
+  --accent: #7c3aed; /* violet-600 */
+  --accent-2: #22c55e; /* green-500 */
+}
+html,body,#root{height:100%}
+body{margin:0;background:#f6f7fb;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+.layout{display:flex;flex-direction:column;height:100%}
+.topnav{display:flex;align-items:center;justify-content:space-between;background:#111827;color:#fff;padding:10px 16px}
+.topnav .brand{font-weight:700}
+.topnav nav a{color:#cbd5e1;margin-right:12px;text-decoration:none;padding:8px;border-bottom:2px solid transparent}
+.topnav nav a.active{color:#fff;border-color:var(--accent)}
+.topnav .logout{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:8px 12px;cursor:pointer}
+.content{display:flex;flex:1;min-height:0}
+.leftnav{width:300px;background:#f8fafc;border-right:1px solid #e5e7eb;padding:16px;overflow:auto}
+.leftnav h4{margin:8px 0}
+.leftnav label{display:block;font-size:12px;color:#334155;margin:8px 0}
+.leftnav input, .leftnav select{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;margin-top:4px}
+.leftnav button{margin-top:12px;background:var(--accent);color:white;border:none;border-radius:8px;padding:10px;cursor:pointer}
+.leftnav .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+main{flex:1;padding:16px;overflow:auto}
+.login{display:flex;align-items:center;justify-content:center;height:100%}
+.card{background:white;padding:24px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:340px}
+.card h1{margin:0 0 16px}
+.card label{display:block;font-size:12px;color:#334155;margin:8px 0}
+.card input{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:4px}
+.card button{width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:8px;margin-top:12px;cursor:pointer}
+.error{color:#b91c1c}
+.table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden}
+.table th, .table td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left}
+.badge{padding:4px 8px;border-radius:9999px;font-size:12px}
+.badge.success{background:#dcfce7;color:#166534}
+.badge.error{background:#fee2e2;color:#991b1b}
+.code{background:#0b1020;color:#c1f5d0;padding:12px;border-radius:12px;overflow:auto}
+.muted{color:var(--muted)}
+
+/* New: analysis grid + cards */
+.grid{display:grid;gap:16px}
+.grid.cols-2{grid-template-columns:1fr 1fr}
+.grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.card2{background:white;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+.card2 h3{margin-top:0;margin-bottom:8px;color:var(--text)}
+.kpi{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.kpi .tile{border-radius:12px;padding:12px;border:2px solid #e5e7eb}
+.kpi .tile .label{font-size:12px;color:#334155}
+.kpi .tile .value{font-size:22px;font-weight:700;color:#111827}
+
+.list{margin:0;padding-left:16px}
+.list li{margin:4px 0}
+
+.tabs{display:flex;gap:8px;border-bottom:2px solid #e5e7eb;margin-bottom:12px}
+.tab{padding:8px 10px;color:#64748b;border-bottom:3px solid transparent;background:transparent}
+.tab.active{color:#7c3aed;border-color:#7c3aed}
+.btn{display:inline-flex;align-items:center;gap:8px;background:#111827;color:white;border:none;border-radius:8px;padding:10px 12px;cursor:pointer}
+.btn.secondary{background:#7c3aed}
+.btn.ghost{background:white;color:#111827;border:1px solid #e5e7eb}
+.flex{display:flex;gap:12px;align-items:center}
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+.text-xs{font-size:12px;color:#475569}
+.text-sm{font-size:14px;color:#334155}
+.text-lg{font-size:18px}
+.text-muted{color:#64748b}
+pre.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}

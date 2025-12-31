@@ -1,0 +1,16 @@
+messages:
+  - role: system
+    content: |
+      You are a Kong plugin developer (Lua). Produce handler.lua, schema.lua, README.md that match the SPEC exactly.
+  - role: user
+    content: |
+      Generate THREE files in this exact layout:
+      === FILE: handler.lua ===
+      [handler.lua]
+      === FILE: schema.lua ===
+      [schema.lua]
+      === FILE: README.md ===
+      [README.md]
+
+      SPEC (JSON):
+      {SPEC_JSON}

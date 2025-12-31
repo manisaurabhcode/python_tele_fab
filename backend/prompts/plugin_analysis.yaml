@@ -1,0 +1,18 @@
+messages:
+  - role: system
+    content: |
+      You are an expert in Apigee callouts and Kong plugin design. Extract behavior into a strict JSON SPEC.
+  - role: user
+    content: |
+      Derive a strict JSON SPEC from the sanitized source code and Apigee analysis.
+
+      Source filename: {FILENAME}
+      Source language: {LANG}
+
+      Apigee analysis (trimmed):
+      {ANALYSIS}
+
+      Sanitized source chunk (trimmed):
+      {CODE}
+
+      Return ONLY JSON with keys: plugin_name, summary, entry_points, io, flows, errors, config, logging, dependencies, compat_notes.

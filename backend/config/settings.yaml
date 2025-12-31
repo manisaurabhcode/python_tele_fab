@@ -1,0 +1,83 @@
+
+llm:
+  provider: genaihub_langchain
+  model: anthropic--claude-4-sonnet
+  max_tokens: 16000
+  temperature: 0.1
+
+runtime:
+  ai_core:
+    auth_url: ${URL}/oauth/token
+    client_id: ${CLIENTID}
+    client_secret: ${CLIENTSECRET}
+    base_url: ${AI_API_URL}
+    resource_group: default
+
+scoring_rules:
+  # Volume / structure
+  policy_volume: 5                  # total policies (bin or per-5 policies)
+  policy_type_diversity: 4          # distinct policy types (bin or per-3 types)
+  conditional_flows_complex: 7      # deep/nested conditions, multi-route rules
+
+  # Custom code
+  javascript_callout: 10            # per JS policy; add +5 if file > 200 LOC
+  java_callout: 15                  # per Java callout; +10 if custom JARs present
+  python_callout: 10                # per Python script
+
+  # Orchestration / integrations
+  service_callout: 8                # per call; +4 if chained/dependent
+  external_dependencies: 10         # DBs, MQ, third-party services (per type)
+  kvm_usage: 6                      # per KVM (encrypted: +3)
+
+  # Security
+  oauth_jwt_complex: 10             # OAuth/JWT with scopes/claims mapping
+  mtls_saml: 12                     # mTLS or SAML presence (per mechanism)
+  verify_api_key: 2                 # basic key verification
+  threat_protection: 6              # XML/JSON threat protection, schema validation
+
+  # Mediation / transformation
+  transformation_policy: 8          # JSON↔XML, XSLT, mappings (per policy)
+  extract_variables_regex: 6        # regex/XPath/JSONPath (per non-trivial usage)
+  assign_message: 2                 # lightweight header/body rewrites
+  soap_xml_complexity: 10           # SOAP envelopes, namespaces, XSLT pipelines
+
+  # Traffic & performance
+  quota_spike_arrest: 3             # per policy
+  cache_policy: 4                   # per cache config; +3 if custom invalidation
+
+  # Composition / reuse
+  shared_flow_reference: 5          # per reference; +5 if nested (>=2 levels)
+  custom_policy: 5                  # non-standard/custom policy implementations
+  custom_analytics: 6               # StatisticsCollector/custom analytics variables
+
+  # Targets & environment
+  multiple_target_servers: 5        # per target beyond the first
+  dynamic_routing: 7                # KVM-/condition-driven target selection
+  deployment_environments: 6        # per environment beyond the first
+
+  # Red-flag overrides (if any present, bump complexity band one level; if >=2, set to 'high')
+  overrides:
+    java_callouts_with_custom_jars: true
+    python_scripts_present: true
+    xslt_transformations_present: true
+    saml_auth_present: true
+    shared_flows_nested_3plus: true
+    custom_policy_implementations: true
+    javascript_total_loc_gt_500: true
+    service_callouts_5plus: true
+
+  # Band mapping (after summation and overrides)
+  bands:
+    low: [0, 100]
+    medium: [101, 250]
+    high: [251, 99999]
+
+logging:
+  level: INFO
+  format: json
+  propagate_correlation_id: true
+  correlation_header: X-Request-ID
+  console: false
+  file:
+    enabled: true
+    path: /home/ubuntu/code/glide/glide_with_ai/backend/logs/app.log

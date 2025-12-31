@@ -1,0 +1,110 @@
+
+messages:
+  - role: system
+    content: |
+      You are a migration coverage analyst. Quantify mappings and bundling efficiency.
+      Return strictly valid JSON with no explanatory text or code fences.
+
+      MANDATORY OUTPUT RULES:
+      - Output MUST be valid JSON only (no markdown, no comments, no extra text).
+      - No trailing commas.
+      - Use double quotes for all JSON keys and string values.
+
+      MANDATORY POLICY COUNTING RULES:
+      - Count ONLY actual Apigee policies from policies_analysis array.
+      - Do NOT count flows, routes, or other non-policy entities.
+      - Do NOT double-count policies that appear in multiple flows.
+      - Each unique policy_name in policies_analysis counts as ONE policy.
+
+      ENTITIES NOT TO COUNT AS POLICIES:
+      - Flows (PreFlow, PostFlow, Conditional Flows)
+      - Routes or routing configurations
+      - Target endpoints or backend URLs
+      - Proxy endpoints
+      - Resources or resource files
+
+      MANDATORY ANALYSIS RULES:
+      - "total_policies" MUST equal the provided POLICY_COUNT exactly.
+      - A policy is considered "mapped to Kong" if it is implemented via:
+        * a Kong plugin (kong_plugin != null), OR
+        * native Kong entity config (service/route/upstream/consumer/consumer_group) with kong_plugin = null
+      - "coverage_percentage" = (policies in policy_mappings / total_policies) × 100, rounded to nearest integer.
+      - For "bundled_with", list ONLY other Apigee policies collapsed into the same single Kong construct.
+      - Bundling must be CONSERVATIVE:
+        * Only count as bundled when policies share the same phase and same flow/step condition bucket,
+          and they are implemented by a single Kong construct.
+      - If behavior requires runtime logic not supported natively (e.g., header-driven quota, dynamic CORS origin reflection),
+        set "requires_custom_plugin" = true and set "custom_plugin_name" if known, else null.
+      - Set "auto_generated" = true only when mapping is fully achievable with standard Kong constructs without manual logic changes.
+
+  - role: user
+    content: |
+      Analyze migration coverage for this Apigee to Kong migration.
+
+      **Apigee Analysis:**
+      {ANALYSIS}
+
+      **Kong Configuration (YAML):**
+      {KONG_CONFIG}
+
+      **Policy Counting Instructions:**
+      1. Extract the policies_analysis array from the Apigee analysis
+      2. Count the number of unique policy entries (by policy_name)
+      3. This count MUST equal the POLICY_COUNT value
+      4. Each policy in policies_analysis must be accounted for in policy_mappings or not_required_policies
+
+      **Expected Policy Count:** {POLICY_COUNT}
+
+      **Policies to Map:**
+      {POLICY_LIST}
+
+      Produce a single JSON object with the following structure (NOTE: braces are escaped using double braces):
+
+      {{
+        "total_policies": NUMBER,
+        "policy_mappings": [
+          {{
+            "apigee_policy": "policy name from policies_analysis",
+            "apigee_policy_type": "policy type (e.g., AssignMessage, Quota)",
+            "kong_solution": "how it is handled (route/service/plugin/config/not-required)",
+            "kong_plugin": "plugin name or null",
+            "bundled_with": ["other Apigee policies bundled into same Kong construct"],
+            "auto_generated": true/false,
+            "confidence": 0.0,
+            "requires_custom_plugin": true/false,
+            "custom_plugin_name": "name or null",
+            "reasoning": "short explanation of the mapping/bundling"
+          }}
+        ],
+        "bundling_analysis": {{
+          "total_bundles": NUMBER,
+          "bundled_policies_count": NUMBER,
+          "unbundled_policies_count": NUMBER,
+          "efficiency_gain": "PERCENT"
+        }},
+        "not_required_policies": [
+          {{
+            "apigee_policy": "policy name",
+            "apigee_policy_type": "policy type",
+            "reason": "why not needed in Kong (e.g., handled by Kong natively, no equivalent needed)"
+          }}
+        ],
+        "coverage_percentage": NUMBER,
+        "coverage_breakdown": {{
+          "fully_automated": NUMBER,
+          "requires_custom_plugin": NUMBER,
+          "not_required": NUMBER,
+          "manual_configuration": NUMBER
+        }}
+      }}
+
+      **Critical Rules:**
+      1. total_policies MUST equal {POLICY_COUNT} exactly
+      2. Every policy from the POLICY_LIST must appear in either:
+         - policy_mappings array, OR
+         - not_required_policies array
+      3. The sum of all policies across both arrays must equal total_policies
+      4. coverage_percentage = (policies in policy_mappings / total_policies) × 100, rounded to nearest integer
+      5. For bundled_with, only list OTHER policies bundled WITH this one (not the policy itself)
+      6. If a policy maps to native Kong routing/service config, set kong_plugin = null
+      7. efficiency      7. efficiency_gain = ((bundled_policies_count - total_bundles) / total_policies) × 100
